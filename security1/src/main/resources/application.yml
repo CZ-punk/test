@@ -1,0 +1,46 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://springboot-service.c94eywaw89pq.ap-northeast-2.rds.amazonaws.com:3306/mydb?serverTimezone=UTC&characterEncoding=UTF-8
+    #jdbc:mysql://localhost:3306/test?serverTimezone=Asia/Seoul
+    username: root
+    password: ewqdsa1927
+
+  jpa:
+    hibernate:
+      ddl-auto: create #create update none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: true
+
+  profiles:
+    include:
+      - oauth2
+
+
+
+jwt:
+  secretKey: bXktc2VjdXJpdHktZnVja2luZy1wcm9qZWN0LWZpbGVzLXNlY3JldC1rZXktbGl0dGxlLWJpdAo
+
+  access:
+    expiration: 3600000
+    header: Authorization
+
+  refresh:
+    expiration: 1209600000 #  (1000L(ms -> s) * 60L(s -> m) * 60L(m -> h) * 24L(h -> 하루) * 14(2주))
+    header: Authorization-refresh
+
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+
