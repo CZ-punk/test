@@ -39,6 +39,7 @@ public class GoogleController {
     private final OAuth2AuthorizedClientService authorizedClientService;
     private static final String GOOGLE = "google";
 
+
     /**
      * 확인용 메서드
      */
@@ -75,11 +76,7 @@ public class GoogleController {
         return ResponseEntity.ok(mailById);
     }
 
-    @Bean
-    public OAuth2AuthorizedClientService authorizedClientService(
-            ClientRegistrationRepository clientRegistrationRepository) {
-        return new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
-    }
+
 
 
 
