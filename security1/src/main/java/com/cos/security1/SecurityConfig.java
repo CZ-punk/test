@@ -28,6 +28,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
@@ -51,17 +52,11 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
 
 
-    @Bean
-    public OAuth2AuthorizedClientService authorizedClientService(
-            ClientRegistrationRepository clientRegistrationRepository) {
-        return new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
-    }
-
-    @Bean
-    public WebSecurityCustomizer configure() {
-        return (web -> web.ignoring()
-                .requestMatchers(new AntPathRequestMatcher("/")));
-    }
+//    @Bean
+//    public WebSecurityCustomizer configure() {
+//        return (web -> web.ignoring()
+//                .requestMatchers(new AntPathRequestMatcher("/")));
+//    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
