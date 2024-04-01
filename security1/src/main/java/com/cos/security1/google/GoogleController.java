@@ -9,10 +9,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.Response;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,6 +73,12 @@ public class GoogleController {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, customOAuth2User.getName());
         Message mailById = gmailService.getMailById(client.getAccessToken().getTokenValue(), emailId);
         return ResponseEntity.ok(mailById);
+    }
+
+    @Bean
+    public OAuth2AuthorizedClientService authorizedClientService(
+            ClientRegistrationRepository clientRegistrationRepository) {
+        return new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
     }
 
 
