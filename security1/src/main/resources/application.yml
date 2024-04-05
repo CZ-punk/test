@@ -15,17 +15,18 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/test?serverTimezone=Asia/Seoul
-    #
-    #jdbc:mysql://springboot-service.c94eywaw89pq.ap-northeast-2.rds.amazonaws.com:3306/mydb?serverTimezone=UTC&characterEncoding=UTF-8
-    username: cos
-    password: cos1234
+    url: jdbc:mysql://springboot-service.c94eywaw89pq.ap-northeast-2.rds.amazonaws.com:3306/mydb?serverTimezone=UTC&characterEncoding=UTF-8
 
+    #jdbc:mysql://localhost:3306/test?serverTimezone=Asia/Seoul
+    #jdbc:mysql://springboot-service.c94eywaw89pq.ap-northeast-2.rds.amazonaws.com:3306/mydb?serverTimezone=UTC&characterEncoding=UTF-8
+    username: root
+    password: ewqdsa1927
+    # cos cos1234
     #root ewqdsa1927
 
   jpa:
     hibernate:
-      ddl-auto: create #create update none
+      ddl-auto: update #create update none
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: true
