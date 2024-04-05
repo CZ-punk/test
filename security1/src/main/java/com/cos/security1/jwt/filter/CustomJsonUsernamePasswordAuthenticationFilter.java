@@ -23,7 +23,7 @@ public class CustomJsonUsernamePasswordAuthenticationFilter extends AbstractAuth
 
     private static final String DEFAULT_LOGIN_REQUEST_URL = "/login";
     private static final String HTTP_METHOD = "POST";
-    private static final String CONTENT_TYPE = "application/json";
+    private static final String CONTENT_TYPE = "application/json; charset=utf-8";
     private static final String USERNAME_KEY = "email";
     private static final String PASSWORD_KEY = "password";
     public static final AntPathRequestMatcher DEFAULT_LOGIN_PATH_REQUEST_MATCHER =
@@ -38,7 +38,7 @@ public class CustomJsonUsernamePasswordAuthenticationFilter extends AbstractAuth
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
-        if (request.getContentType() == null || !request.getContentType().equals(CONTENT_TYPE)) {
+        if (request.getContentType() == null || !request.getContentType().startsWith("application/json")) {
             throw new AuthenticationServiceException("Authentication Content-type not supported: " + request.getContentType());
         }
 

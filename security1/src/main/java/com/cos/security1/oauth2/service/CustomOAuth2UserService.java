@@ -196,10 +196,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                     createdEmail.getEmail(),
                     createdEmail.getRole());
         }
-
-
     }
-
 
 
     private CustomOAuth2User createdCustomOAuth2User(OAuth2UserRequest userRequest) {
@@ -226,8 +223,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 createdUser.getEmail(),
                 createdUser.getRole());
 
-
-
         Authentication authentication = new UsernamePasswordAuthenticationToken(oauth2, null, oauth2.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -239,45 +234,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     }
 
-
-
-    private Optional<CustomOAuth2User> addOrUpdateEmail(User user, String email, OAuth2UserRequest userRequest, Optional<User> findUser) {
-
-        Optional<Email> findEmail = user.getEmailList().stream()
-                .filter(e -> e.getEmail().equals(email))
-                .findFirst();
-
-        if (findEmail.isEmpty()) {
-
-            OAuth2User oAuth2User = createdOAuth2User(userRequest);
-            Map<String, Object> attributes = oAuth2User.getAttributes();
-            String registrationId = userRequest.getClientRegistration().getRegistrationId();
-            SocialType socialType = getSocialType(registrationId);
-
-            String userNameAttributeName = userRequest.getClientRegistration()
-                    .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
-
-            OAuthAttributes extractAttributes = OAuthAttributes.of(socialType, userNameAttributeName, attributes);
-            Email createdEmail = getEmail(extractAttributes, socialType, findUser);
-
-            CustomOAuth2User oauth2 = new CustomOAuth2User(
-                    Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
-                    attributes,
-                    extractAttributes.getNameAttributeKey(),
-                    createdEmail.getEmail(),
-                    createdEmail.getRole());
-
-            Authentication authentication = new UsernamePasswordAuthenticationToken(oauth2, null, oauth2.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            log.info("CustomOAuth2User: {}", oauth2);
-            log.info("authentication: {}", authentication);
-
-            return Optional.of(oauth2);
-        }
-
-        return Optional.empty();
-    }
 
     private SocialType getSocialType(String registrationId) {
         if (NAVER.equals(registrationId)) {
