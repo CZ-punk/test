@@ -107,16 +107,16 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
         String registrationId = authenticationToken.getAuthorizedClientRegistrationId();
 
-        if (userRequest.getClientRegistration().getRegistrationId().equals(GOOGLE)) {
-            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.GOOGLE, attributes.get("sub").toString());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google과 Naver가 아닌 다른 플랫폼은 지원하지 않습니다.");
-        }
-
-        if (userRequest.getClientRegistration().getRegistrationId().equals(NAVER)) {
-            Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.NAVER, response.get("id").toString());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google과 Naver가 아닌 다른 플랫폼은 지원하지 않습니다.");
-        }
+//        if (userRequest.getClientRegistration().getRegistrationId().equals(GOOGLE)) {
+//            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.GOOGLE, attributes.get("sub").toString());
+//
+//        }
+//
+//        if (userRequest.getClientRegistration().getRegistrationId().equals(NAVER)) {
+//            Map<String, Object> response = (Map<String, Object>) attributes.get("response");
+//            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.NAVER, response.get("id").toString());
+//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google과 Naver가 아닌 다른 플랫폼은 지원하지 않습니다.");
+//        }
 
 
 

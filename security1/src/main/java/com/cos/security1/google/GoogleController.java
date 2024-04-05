@@ -43,16 +43,16 @@ public class GoogleController {
      * ex inbox
      */
 
-    @GetMapping("/box")
-    public ListMessagesResponse exBox(@AuthenticationPrincipal CustomOAuth2User oAuth2User) throws IOException {
-
-        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, oAuth2User.getName());
-        Gmail googleClient = GmailService.getGmailService(client.getAccessToken().getTokenValue());
-
-        return gmailService.listMessages(googleClient, "me");
-
-
-    }
+//    @GetMapping("/box")
+//    public ListMessagesResponse exBox(@AuthenticationPrincipal CustomOAuth2User oAuth2User) throws IOException {
+//
+//        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, oAuth2User.getName());
+//        Gmail googleClient = GmailService.getGmailService(client.getAccessToken().getTokenValue());
+//
+//        return gmailService.listMessages(googleClient, "me");
+//
+//
+//    }
 
 
     /**
