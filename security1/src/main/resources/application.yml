@@ -6,14 +6,22 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+#  ssl:
+#    key-store: C:\Users\cnhhw\Desktop\aws\key-pair\keystore_test.p12
+#    key-store-type: PKCS12
+#    key-store-password: 12345678
+#    key-alias: key_test
 
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://springboot-service.c94eywaw89pq.ap-northeast-2.rds.amazonaws.com:3306/mydb?serverTimezone=UTC&characterEncoding=UTF-8
-    #jdbc:mysql://localhost:3306/test?serverTimezone=Asia/Seoul
-    username: root
-    password: ewqdsa1927
+    url: jdbc:mysql://localhost:3306/test?serverTimezone=Asia/Seoul
+    #
+    #jdbc:mysql://springboot-service.c94eywaw89pq.ap-northeast-2.rds.amazonaws.com:3306/mydb?serverTimezone=UTC&characterEncoding=UTF-8
+    username: cos
+    password: cos1234
+
+    #root ewqdsa1927
 
   jpa:
     hibernate:
@@ -32,7 +40,8 @@ spring:
             scope:
               - profile
               - email
-              - https://www.googleapis.com/auth/gmail.readonly
+              - https://www.googleapis.com/auth/gmail.modify
+
 
           naver:
             client-id: pfMXjhym1EE0McgR_NLa

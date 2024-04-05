@@ -58,10 +58,13 @@ public class SecurityConfig {
 //                .requestMatchers(new AntPathRequestMatcher("/")));
 //    }
 
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .formLogin(AbstractHttpConfigurer::disable)
+                .formLogin(form -> form
+                        .loginPage("/login").permitAll()
+                )
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(header -> header.
@@ -83,6 +86,8 @@ public class SecurityConfig {
                         .userInfoEndpoint(end -> end
                                 .userService(customOAuth2UserService)
                         )
+                        .loginPage("/oauth2_login")
+                        .defaultSuccessUrl("/", true)
 
                 );
 

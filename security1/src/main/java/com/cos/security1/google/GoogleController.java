@@ -4,40 +4,55 @@ import com.cos.security1.domain.mail.MailRepository;
 import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.google.form.ListForm;
 import com.cos.security1.oauth2.CustomOAuth2User;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
-import lombok.Getter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.Response;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.result.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-@RestController
+@Controller
 @Slf4j
-@RequestMapping("/api")
 @RequiredArgsConstructor
 public class GoogleController {
 
-    private final UserRepository userRepository;
-    private final MailRepository mailRepository;
     private final GmailService gmailService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private static final String GOOGLE = "google";
+
+    /**
+     *  프론트에서는 직접 토큰값을 넘겨주기 때문에 이것을 PathVariable 또는헤더로 받자
+     */
+
+    /**
+     * ex inbox
+     */
+
+    @GetMapping("/box")
+    public ListMessagesResponse exBox(@AuthenticationPrincipal CustomOAuth2User oAuth2User) throws IOException {
+
+        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, oAuth2User.getName());
+        Gmail googleClient = GmailService.getGmailService(client.getAccessToken().getTokenValue());
+
+        return gmailService.listMessages(googleClient, "me");
+
+
+    }
 
 
     /**

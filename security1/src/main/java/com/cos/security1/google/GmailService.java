@@ -1,8 +1,10 @@
 package com.cos.security1.google;
 
 import com.cos.security1.google.form.ListForm;
+import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
@@ -21,12 +23,17 @@ import java.util.List;
 public class GmailService {
 
     private final String userId = "me";
+    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 
-    public static Gmail initializeGmailService(String accessToken) throws IOException {
-        GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken);
-        return new Gmail.Builder(new NetHttpTransport(), JacksonFactory.getDefaultInstance(), credential)
-                .setApplicationName("Your Application Name")
+    public static Gmail getGmailService(String accessToken) throws IOException {
+        Credential credential = new GoogleCredential().setAccessToken(accessToken);
+        return new Gmail.Builder(new NetHttpTransport(), JSON_FACTORY, credential)
+                .setApplicationName("Konkuk")
                 .build();
+    }
+
+    public ListMessagesResponse listMessages(Gmail service, String userId) throws IOException {
+        return service.users().messages().list(userId).setLabelIds(Collections.singletonList("INBOX")).execute();
     }
 
     /**
@@ -34,7 +41,7 @@ public class GmailService {
      */
     public List<Message> confirmProject(String accessToken) throws IOException {
 
-        Gmail gmail = initializeGmailService(accessToken);
+        Gmail gmail = getGmailService(accessToken);
 
         ListMessagesResponse response = gmail.users().messages().list(userId).setLabelIds(List.of("INBOX"))
                 .setQ("-category:promotions -category:social").execute();
@@ -65,14 +72,16 @@ public class GmailService {
 
     public Message getMailById(String accessToken, String messageId) throws IOException {
 
-        Gmail gmail = initializeGmailService(accessToken);
+        Gmail gmail = getGmailService(accessToken);
         Message message = gmail.users().messages().get(userId, messageId).setFormat("full").execute();
         return message;
     }
 
+
+
     public List<ListForm> fetchInboxBasicMessage(String accessToken) throws IOException {
 
-        Gmail gmail = initializeGmailService(accessToken);
+        Gmail gmail = getGmailService(accessToken);
 
         // Inbox label 가진 메시지들 조회
         ListMessagesResponse response = gmail.users().messages().list(userId)

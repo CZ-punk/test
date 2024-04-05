@@ -23,7 +23,7 @@ public class EmailService {
 
     private final UserRepository userRepository;
     private final EmailRepository emailRepository;
-    private final PasswordEncoder passwordEncoder;
+
 
     // 첫번째 파라미터인 email 은 처음에 회원가입한 email 이다.
     public void addEmail(String email, EmailAddDto emailAddDto) throws Exception {
