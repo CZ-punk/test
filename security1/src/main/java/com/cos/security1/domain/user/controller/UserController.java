@@ -42,7 +42,6 @@ public class UserController {
     @PostMapping("/sign-up")
     public ResponseEntity<UserSignDto> signUp(@RequestBody UserSignDto userSignDto, HttpServletResponse response) throws Exception {
         userService.signUp(userSignDto);
-        response.sendRedirect("/home");
         return ResponseEntity.ok(userSignDto);
     }
 
@@ -100,6 +99,13 @@ public class UserController {
 //
 //    }
 
+
+    @PostMapping("/login")
+    public ResponseEntity<User> login(LoginForm loginForm) throws Exception {
+        User loginUser = userService.login(loginForm);
+        return ResponseEntity.ok(loginUser);
+
+    }
     @ResponseBody
     @GetMapping("/jwt-test")
     public String jwtTest() {
