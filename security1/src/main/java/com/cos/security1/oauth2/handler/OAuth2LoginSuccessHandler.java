@@ -30,6 +30,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         try {
             CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
+            log.info("OAuth2 성공 핸들러: {}", request);
+            log.info("OAuth2 성공 핸들러: {}", response);
+            log.info("OAuth2 성공 핸들러: {}", authentication);
+
+
             // get Email 을 통해 어떤 레포지토리에 있는 지 확인 후 넣자.
             log.info("get Class? {}",oAuth2User.getEmail());
 
@@ -41,7 +46,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 addSuccess(response, oAuth2User);
             }
 
-            response.sendRedirect("/");
+            response.sendRedirect("/login/google/success");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -49,7 +54,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     // TODO : 소셜 로그인 시에도 무조건 토큰 생성하지 말고 JWT 인증 필터처럼 RefreshToken 유/무에 따라 다르게 처리
-    private void loginSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User) {
+    private void loginSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User) throws IOException {
 
         log.info("OAuth2 Login Success !");
 
@@ -63,9 +68,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     }
 
-    private void addSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User) {
+    private void addSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User) throws IOException {
 
         log.info("OAuth2 Add Success !");
+        log.info("OAuth2 Add Success !", oAuth2User.getName());
+        log.info("OAuth2 Add Success !", oAuth2User.getEmail());
+
+
+
 
         String accessToken = jwtService.createAccessToken(oAuth2User.getEmail());
         String refreshToken = jwtService.createRefreshToken();
@@ -74,6 +84,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
         jwtService.updateEmailRefreshToken(oAuth2User.getEmail(), refreshToken);
+
     }
 
 }

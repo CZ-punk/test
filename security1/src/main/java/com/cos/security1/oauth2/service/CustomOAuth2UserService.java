@@ -24,6 +24,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
@@ -34,6 +35,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final UserRepository userRepository;
@@ -77,6 +79,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
         if (socialType == SocialType.GOOGLE) {
             Optional<Email> existingEmail = emailRepository.findBySocialTypeAndSocialId(socialType, attributes.get("sub").toString());
+            log.info("OAuth2 로그인 요청: {}", existingEmail);
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             log.info("authentcaiton 구조: {}", authentication);
 
@@ -99,13 +102,26 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private CustomOAuth2User updateEmail(OAuth2UserRequest userRequest, Authentication authentication) throws Exception {
 
+
+        /**
+         * 1. userRequest 객체가 Email Entity 에 존재하는 경우 OR
+         * 2. userRequest 객체가 Email Entity 에 존재하지 않고 Security Context 내에 Authorized 객체가 존재할 경우
+         */
+        
         OAuth2User oAuth2User = createdOAuth2User(userRequest);
         Map<String, Object> attributes = oAuth2User.getAttributes();
+        // userRequest 부분
 
-        // 지금 들어온 정보가 기존에 있던 정보가 같을 경우
+
 
         OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
         String registrationId = authenticationToken.getAuthorizedClientRegistrationId();
+        // Security Context 인증 객체
+
+        log.info("authentication: {}", authentication);
+        log.info("authenticationToken: {}", authenticationToken);
+        log.info("registrationId: {}", registrationId);
+
 
 //        if (userRequest.getClientRegistration().getRegistrationId().equals(GOOGLE)) {
 //            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.GOOGLE, attributes.get("sub").toString());
@@ -131,11 +147,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
             Optional<User> byEmail = userRepository.findByEmail(email);
 
-
-
             String userNameAttributeName = userRequest.getClientRegistration()
                     .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
-
 
             log.info("userNameAttributeName: {}", userNameAttributeName);
 
@@ -172,6 +185,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String email = getAttribute.get("email").toString();
 
         Optional<User> byEmail = userRepository.findByEmail(email);
+        // User 에 존재하는 인증 객체
 
         String userNameAttributeName = userRequest.getClientRegistration()
                 .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
@@ -223,6 +237,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 createdUser.getEmail(),
                 createdUser.getRole());
 
+        log.info("이거는 한번만 와야해..");
         Authentication authentication = new UsernamePasswordAuthenticationToken(oauth2, null, oauth2.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -272,7 +287,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private Email saveEmail(OAuthAttributes attributes, SocialType socialType, Optional<User> byEmail) {
         Email createdEmail = attributes.toEmailEntity(socialType, attributes.getOAuth2UserInfo(), byEmail);
-        log.info("save Email ??  {}", createdEmail);
+        log.info("save Email ??  {}", createdEmail.getEmail());
+        log.info("save ByEmail ?? {}", byEmail.get().getEmail());
+
         return emailRepository.save(createdEmail);
     }
 

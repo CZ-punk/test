@@ -69,6 +69,8 @@ public class OAuthAttributes {
     }
 
     public Email toEmailEntity(SocialType socialType, OAuth2UserInfo oAuth2UserInfo, Optional<User> byEmail) {
+
+        log.info("toEmailEntity byEmail: {}", byEmail);
         return Email.builder()
                 .email(oAuth2UserInfo.getEmail())
                 .socialType(socialType)
