@@ -2,6 +2,7 @@ package com.cos.security1.jwt;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.user.entity.User;
@@ -61,11 +62,12 @@ public class JwtService {
     }
 
 
-    public String createRefreshToken() {
+    public String createRefreshToken(String email) {
         Date now = new Date();
         return JWT.create()
                 .withSubject(REFRESH_TOKEN_SUBJECT)
                 .withExpiresAt(new Date(now.getTime() + refreshTokenExpirationPeriod))
+                .withClaim(EMAIL_CLAIM, email)
                 .sign(Algorithm.HMAC512(secretKey));
     }
 
@@ -99,8 +101,8 @@ public class JwtService {
             log.error("액세스 토큰이 유효하지 않습니다. {}", e);
             return Optional.empty();
         }
-
     }
+
     public void setAccessTokenHeader(HttpServletResponse response, String accessToken) {
         response.setHeader(accessHeader, accessToken);
     }
@@ -141,6 +143,17 @@ public class JwtService {
         }
     }
 
+    public Optional<String> getEmailClaim(String accessToken) {
+        try {
+            DecodedJWT decodedJWT = JWT.decode(accessToken);
+            String emailClaim = decodedJWT.getClaim(EMAIL_CLAIM).asString();
+            return Optional.ofNullable(emailClaim);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+
+    }
 
 
 }

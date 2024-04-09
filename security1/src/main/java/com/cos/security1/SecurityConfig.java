@@ -6,8 +6,6 @@ import com.cos.security1.jwt.filter.JwtAuthenticationProcessingFilter;
 import com.cos.security1.jwt.handler.LoginFailureHandler;
 import com.cos.security1.jwt.handler.LoginSuccessHandler;
 import com.cos.security1.jwt.service.LoginService;
-import com.cos.security1.oauth2.filter.CustomAuthenticationFilter;
-import com.cos.security1.oauth2.filter.CustomAuthenticationProvider;
 import com.cos.security1.oauth2.handler.OAuth2LoginFailureHandler;
 import com.cos.security1.oauth2.handler.OAuth2LoginSuccessHandler;
 import com.cos.security1.oauth2.service.CustomOAuth2UserService;
@@ -17,19 +15,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -45,16 +40,7 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
-
-
-
-
-//    @Bean
-//    public WebSecurityCustomizer configure() {
-//        return (web -> web.ignoring()
-//                .requestMatchers(new AntPathRequestMatcher("/")));
-//    }
-
+    private final UserDetailsService userDetailsService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -67,9 +53,6 @@ public class SecurityConfig {
                 .headers(header -> header.
                         frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                 )
-//                .sessionManagement(manager -> manager
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                )
                 .authorizeHttpRequests(req -> req
                         .requestMatchers("/","/css/**","/images/**","/js/**","/favicon.ico").permitAll()
                         .requestMatchers("/loginForm", "/login").permitAll()
@@ -77,7 +60,6 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/")).permitAll()
                         .anyRequest().permitAll()
                 )
-//                .authenticationProvider(new CustomAuthenticationProvider())
                 .oauth2Login(oauth -> oauth
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
@@ -93,7 +75,11 @@ public class SecurityConfig {
 
         http.addFilterAfter(customJsonUsernamePasswordAuthenticationFilter(), LogoutFilter.class);
         http.addFilterBefore(jwtAuthenticationProcessingFilter(), CustomJsonUsernamePasswordAuthenticationFilter.class);
-//        http.addFilterAfter(customAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
+//
+//        http.addFilterAfter(oAuth2UsernamePasswordAuthenticationFilter(), LogoutFilter.class);
+//        http.addFilterBefore(jwtAuthenticationProcessingFilter(), OAuth2UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }
@@ -115,11 +101,6 @@ public class SecurityConfig {
      * 또한, FormLogin과 동일하게 AuthenticationManager로는 구현체인 ProviderManager 사용(return ProviderManager)
      *
      */
-
-    @Bean
-    public CustomAuthenticationProvider customAuthenticationProvider() {
-        return new CustomAuthenticationProvider();
-    }
 
     @Bean
     public AuthenticationManager authenticationManager() {
@@ -160,6 +141,7 @@ public class SecurityConfig {
         customJsonUsernamePasswordLoginFilter.setAuthenticationFailureHandler(loginFailureHandler());
         return customJsonUsernamePasswordLoginFilter;
     }
+
 
     @Bean
     public JwtAuthenticationProcessingFilter jwtAuthenticationProcessingFilter() {

@@ -1,31 +1,18 @@
 package com.cos.security1.google;
 
-import com.cos.security1.domain.mail.MailRepository;
-import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.google.form.ListForm;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.oauth2.CustomOAuth2User;
-import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.reactive.result.view.RedirectView;
-import org.springframework.web.util.UriComponentsBuilder;
-
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -63,7 +50,6 @@ public class GoogleController {
         return ResponseEntity.ok(listForm);
     }
 
-
     @ResponseBody
     @PostMapping("/api/mail_list/mail_detail")
     public ResponseEntity<Message> getDetailMail(@RequestBody Map<String, String> body) throws IOException {
@@ -95,7 +81,6 @@ public class GoogleController {
         log.info("AccessToken: {}\n", client.getAccessToken().getTokenValue());
 
         return ResponseEntity.ok(messages);
-
     }
 
     @GetMapping("/gmail/list")
@@ -104,11 +89,9 @@ public class GoogleController {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, oAuth2User.getName());
         List<ListForm> listForm = gmailService.fetchInboxBasicMessage(client.getAccessToken().getTokenValue());
         log.info("listForm: {}", listForm);
-
         return ResponseEntity.ok(listForm);
 
     }
-
 
     // 테스트 결과 0.6초
     @GetMapping("/gmail/list/{messageId}")
@@ -128,12 +111,7 @@ public class GoogleController {
         log.info("refreshToken info: {}", client.getRefreshToken().getTokenValue());
 
         Instant expiresAt = client.getAccessToken().getExpiresAt();
-
         return ResponseEntity.ok(expiresAt + "\n");
     }
-
-
-
-
 
 }

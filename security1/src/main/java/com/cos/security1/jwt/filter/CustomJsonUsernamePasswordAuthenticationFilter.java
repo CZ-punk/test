@@ -10,14 +10,19 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 import java.util.Map;
 
 
@@ -33,7 +38,6 @@ public class CustomJsonUsernamePasswordAuthenticationFilter extends AbstractAuth
             new AntPathRequestMatcher(DEFAULT_LOGIN_REQUEST_URL, HTTP_METHOD);
 
     private final ObjectMapper objectMapper;
-
     public CustomJsonUsernamePasswordAuthenticationFilter(ObjectMapper objectMapper) {
         super(DEFAULT_LOGIN_PATH_REQUEST_MATCHER);
         this.objectMapper = objectMapper;
@@ -42,12 +46,7 @@ public class CustomJsonUsernamePasswordAuthenticationFilter extends AbstractAuth
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
 
-        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
-        log.info("필터 왜 동작안해");
-        if (existingAuth != null && existingAuth.isAuthenticated()) {
-            log.info("CustomJsonUsernamePasswordAuthenticationFilter existing Auth: {}", existingAuth);
-            return existingAuth;
-        }
+        log.info("CustomJsonUsernamePasswordFilter Start!");
 
         if (request.getContentType() == null || !request.getContentType().startsWith("application/json")) {
             throw new AuthenticationServiceException("Authentication Content-type not supported: " + request.getContentType());
@@ -60,8 +59,21 @@ public class CustomJsonUsernamePasswordAuthenticationFilter extends AbstractAuth
         String password = usernamePasswordMap.get(PASSWORD_KEY);
 
         UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(email, password);
+        log.info("New usernamePassword Authentication Token: {}", authRequest);
+        Authentication auth = this.getAuthenticationManager().authenticate(authRequest);
 
-        return this.getAuthenticationManager().authenticate(authRequest);
-
+        return auth;
+//        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
+//        if (existingAuth == null || !existingAuth.isAuthenticated()) {
+//            log.info("authentication 객체가 없을 때");
+//            SecurityContextHolder.getContext().setAuthentication(auth);
+//            return auth;
+//        }
+//
+//
+//        log.info("Old authentication 객체가 있을 때: {}", existingAuth);
+//        SecurityContextHolder.getContext().setAuthentication(existingAuth);
+//        return this.getAuthenticationManager().authenticate(existingAuth);
     }
+
 }

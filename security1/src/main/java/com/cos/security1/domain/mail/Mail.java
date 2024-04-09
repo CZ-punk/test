@@ -19,6 +19,7 @@ public class Mail {
     private String title;
     private String contents;
     private String mediaFileURL;
+    private String summaryContents;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "EMAIL_ID")
@@ -37,5 +38,9 @@ public class Mail {
 
     public Mail() {
 
+    }
+
+    public void setSummaryContent(String summary) {
+        this.summaryContents = summary;
     }
 }

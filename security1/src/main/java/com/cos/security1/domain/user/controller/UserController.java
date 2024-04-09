@@ -25,6 +25,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.io.InvalidObjectException;
 import java.util.Optional;
 
 @Controller
@@ -72,12 +73,30 @@ public class UserController {
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
 
+    @GetMapping("/add/google")
+    public void addGoogle(HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        log.info("Authentication saved to SecurityContext in thread: " + Thread.currentThread().getName());
+
+        log.info("authentication: {}", authentication);
+
+        if (authentication == null) {
+            new InvalidObjectException("유저객체 없음.");
+            return;
+        }
+
+        response.sendRedirect(GOOGLE_LOGIN_FORM);
+    }
+
     @ResponseBody
     @GetMapping("/login/google/success")
     public GoogleTokenDto OAuth2loginSuccess(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName());
+
+        log.info("authentication: {}", authentication);
 
         if (client == null) {
             throw new IllegalStateException("클라이언트 정보를 찾을 수 없습니다.");
@@ -117,6 +136,10 @@ public class UserController {
     @ResponseBody
     @GetMapping("/user/info")
     public String userInfo(@AuthenticationPrincipal UserDetails userDetails) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info("user/info: {}", authentication);
+
         if (userDetails != null) {
             // 사용자가 로그인한 상태
 

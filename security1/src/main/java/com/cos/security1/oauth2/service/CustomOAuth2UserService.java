@@ -3,6 +3,7 @@ package com.cos.security1.oauth2.service;
 import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.user.entity.User;
+import com.cos.security1.jwt.service.LoginService;
 import com.cos.security1.oauth2.CustomOAuth2User;
 import com.cos.security1.oauth2.OAuthAttributes;
 import com.cos.security1.domain.user.entity.SocialType;
@@ -17,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -40,6 +42,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private final UserRepository userRepository;
     private final EmailRepository emailRepository;
+    private final LoginService loginService;
 
     private static final String NAVER = "naver";
     private static final String GOOGLE = "google";
@@ -55,27 +58,19 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         SocialType socialType = getSocialType(registrationId);
 
+//        UserDetails userDetails = loginService.loadUserByUsername(LoginService.email);
+        Authentication authentication2 = SecurityContextHolder.getContext().getAuthentication();
+        log.info("dsof, {}", authentication2);
+
+//        log.info("LoadUSer 에서의 UserDetails: {}", userDetails);
+
+        /**
+         * 만약 user Dtails 의 객체가
+         */
+
         log.info("oAuth2User.getName, {}", oAuth2User.getName());
         log.info("attributes: {}", attributes);
 
-        if (socialType == (SocialType.NAVER)) {
-            Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-            Optional<Email> existingEmail = emailRepository.findBySocialTypeAndSocialId(socialType, response.get("id").toString());
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            log.info("authentication 구조: {}", authentication);
-            if (existingEmail.isPresent()) {
-                return updateEmail(userRequest, authentication);
-            } else {
-
-                if (authentication != null && authentication.isAuthenticated() &&!(authentication instanceof AnonymousAuthenticationToken)) {
-                    return updateEmail(userRequest, authentication);
-
-                }
-                else {
-                    return createdCustomOAuth2User(userRequest);
-                }
-            }
-        }
 
         if (socialType == SocialType.GOOGLE) {
             Optional<Email> existingEmail = emailRepository.findBySocialTypeAndSocialId(socialType, attributes.get("sub").toString());
@@ -87,7 +82,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 return updateEmail(userRequest, authentication);
             } else {
 
-                if (authentication != null && authentication.isAuthenticated() &&!(authentication instanceof AnonymousAuthenticationToken)) {
+                if (authentication != null && authentication.isAuthenticated() && !(authentication instanceof AnonymousAuthenticationToken)) {
                     return updateEmail(userRequest, authentication);
 
                 } else {
@@ -99,7 +94,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     }
 
 
-
     private CustomOAuth2User updateEmail(OAuth2UserRequest userRequest, Authentication authentication) throws Exception {
 
 
@@ -107,13 +101,13 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
          * 1. userRequest 객체가 Email Entity 에 존재하는 경우 OR
          * 2. userRequest 객체가 Email Entity 에 존재하지 않고 Security Context 내에 Authorized 객체가 존재할 경우
          */
-        
+
         OAuth2User oAuth2User = createdOAuth2User(userRequest);
         Map<String, Object> attributes = oAuth2User.getAttributes();
         // userRequest 부분
 
 
-
+        log.info("CustomOAuth2Service 의 updateEmail: {}", authentication);
         OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
         String registrationId = authenticationToken.getAuthorizedClientRegistrationId();
         // Security Context 인증 객체
@@ -123,94 +117,80 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         log.info("registrationId: {}", registrationId);
 
 
-//        if (userRequest.getClientRegistration().getRegistrationId().equals(GOOGLE)) {
-//            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.GOOGLE, attributes.get("sub").toString());
-//
-//        }
-//
-//        if (userRequest.getClientRegistration().getRegistrationId().equals(NAVER)) {
-//            Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-//            Optional<User> findUser = userRepository.findBySocialTypeAndSocialId(SocialType.NAVER, response.get("id").toString());
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google과 Naver가 아닌 다른 플랫폼은 지원하지 않습니다.");
-//        }
-
-
-
-        if (registrationId.equals(NAVER)) {
-            OAuth2User principal = authenticationToken.getPrincipal();
-            Map<String, Object> getAttribute = principal.getAttributes();
-            Map<String, Object> res = (Map<String, Object>) getAttribute.get("response");
-            String email = res.get("email").toString();
-            log.info("getAttribute, {} " ,getAttribute);
-            log.info("res, {} " ,res);
-            log.info("email, {} " ,email);
-
-            Optional<User> byEmail = userRepository.findByEmail(email);
-
-            String userNameAttributeName = userRequest.getClientRegistration()
-                    .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
-
-            log.info("userNameAttributeName: {}", userNameAttributeName);
-
-            if (userRequest.getClientRegistration().getRegistrationId().equals(NAVER)) {
-                OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.NAVER, userNameAttributeName, attributes);
-                Email createdEmail = getEmail(extractAttributes, SocialType.NAVER, byEmail);
-
-                return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
-                        attributes,
-                        extractAttributes.getNameAttributeKey(),
-                        createdEmail.getEmail(),
-                        createdEmail.getRole());
-            }
-            else {
-                OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
-                Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, byEmail);
-
-
-
-                return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
-                        attributes,
-                        extractAttributes.getNameAttributeKey(),
-                        createdEmail.getEmail(),
-                        createdEmail.getRole());
-            }
-
-
-        }
-
-        // registrationId.equals(GOOGLE)
-
         OAuth2User principal = authenticationToken.getPrincipal();
         Map<String, Object> getAttribute = principal.getAttributes();
         String email = getAttribute.get("email").toString();
 
-        Optional<User> byEmail = userRepository.findByEmail(email);
-        // User 에 존재하는 인증 객체
+        Optional<Email> byEmail = emailRepository.findByEmail(email);
 
         String userNameAttributeName = userRequest.getClientRegistration()
                 .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
 
-        if (userRequest.getClientRegistration().getRegistrationId().equals(NAVER)) {
-            OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.NAVER, userNameAttributeName, attributes);
-            Email createdEmail = getEmail(extractAttributes, SocialType.NAVER, byEmail);
+        String loginEmail = null;
+        Optional<User> userEmail = Optional.empty();
 
-            return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
-                    attributes,
-                    extractAttributes.getNameAttributeKey(),
-                    createdEmail.getEmail(),
-                    createdEmail.getRole());
-        }
-        else {
+        if (byEmail.isEmpty()) {
+
+            userEmail = userRepository.findByEmail(email);
+
             OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
 
-            Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, byEmail);
+            Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, userEmail);
             return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
                     attributes,
                     extractAttributes.getNameAttributeKey(),
                     createdEmail.getEmail(),
                     createdEmail.getRole());
+
+
         }
+
+        /**
+         * 이메일 레포지토리에 존재하는 경우
+         * 즉, authentication 객체가 이메일 db 에 있는 것으로 변경됐으니
+         * 이메일 entity 와 연관관계에 있는 user entity 로 연관관계를 매핑해 저장
+         */
+        loginEmail = byEmail.get().getUser().getEmail();
+        userEmail = userRepository.findByEmail(loginEmail);
+
+        OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
+
+        Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, userEmail);
+        return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
+                attributes,
+                extractAttributes.getNameAttributeKey(),
+                createdEmail.getEmail(),
+                createdEmail.getRole());
+
+
+
+
+        // User 에 존재하는 인증 객체
+
+
+//
+//        if (userRequest.getClientRegistration().getRegistrationId().equals(NAVER)) {
+//            OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.NAVER, userNameAttributeName, attributes);
+//            Email createdEmail = getEmail(extractAttributes, SocialType.NAVER, loginEmail);
+//
+//            return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
+//                    attributes,
+//                    extractAttributes.getNameAttributeKey(),
+//                    createdEmail.getEmail(),
+//                    createdEmail.getRole());
+//        }
+//        else {
+//            OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
+//
+//            Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, byEmail);
+//            return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
+//                    attributes,
+//                    extractAttributes.getNameAttributeKey(),
+//                    createdEmail.getEmail(),
+//                    createdEmail.getRole());
+//        }
     }
+
 
 
     private CustomOAuth2User createdCustomOAuth2User(OAuth2UserRequest userRequest) {
