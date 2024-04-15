@@ -3,6 +3,7 @@ package com.cos.security1.oauth2.service;
 import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.user.entity.User;
+import com.cos.security1.jwt.InMemoryTokenStore;
 import com.cos.security1.jwt.service.LoginService;
 import com.cos.security1.oauth2.CustomOAuth2User;
 import com.cos.security1.oauth2.OAuthAttributes;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.swing.text.html.Option;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.Map;
@@ -42,7 +44,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private final UserRepository userRepository;
     private final EmailRepository emailRepository;
-    private final LoginService loginService;
+    private final InMemoryTokenStore tokenStore;
 
     private static final String NAVER = "naver";
     private static final String GOOGLE = "google";
@@ -58,18 +60,25 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         SocialType socialType = getSocialType(registrationId);
 
-//        UserDetails userDetails = loginService.loadUserByUsername(LoginService.email);
-        Authentication authentication2 = SecurityContextHolder.getContext().getAuthentication();
-        log.info("dsof, {}", authentication2);
+        String nickname = attributes.get("name").toString();
+        String token = tokenStore.getToken(nickname);
 
-//        log.info("LoadUSer 에서의 UserDetails: {}", userDetails);
+        if (token != null) {
+            log.info("oauth2 token: {}", token);
+            tokenStore.removeToken("nickname");
+            Optional<User> findUser = userRepository.findByNickname(nickname);
+
+            return NormalUserUpdateEmail(userRequest, findUser);
+
+        }
 
         /**
-         * 만약 user Dtails 의 객체가
+         * 만약 user Details 의 객체가
          */
 
         log.info("oAuth2User.getName, {}", oAuth2User.getName());
         log.info("attributes: {}", attributes);
+
 
 
         if (socialType == SocialType.GOOGLE) {
@@ -191,6 +200,24 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 //        }
     }
 
+    private CustomOAuth2User NormalUserUpdateEmail(OAuth2UserRequest userRequest, Optional<User> findUser) {
+
+
+        OAuth2User oAuth2User = createdOAuth2User(userRequest);
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+        String userNameAttributeName = userRequest.getClientRegistration()
+                .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+
+        OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
+
+        Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, findUser);
+        return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
+                attributes,
+                extractAttributes.getNameAttributeKey(),
+                createdEmail.getEmail(),
+                createdEmail.getRole());
+    }
+
 
 
     private CustomOAuth2User createdCustomOAuth2User(OAuth2UserRequest userRequest) {
@@ -252,7 +279,10 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private User saveUser(OAuthAttributes attributes, SocialType socialType) {
         User createdUser = attributes.toUserEntity(socialType, attributes.getOAuth2UserInfo());
-        return userRepository.save(createdUser);
+        User user = userRepository.saveAndFlush(createdUser);
+        Email createdEmail = attributes.toEmailEntity(socialType, attributes.getOAuth2UserInfo(), Optional.of(user));
+        emailRepository.save(createdEmail);
+        return user;
     }
 
     private Email getEmail(OAuthAttributes attributes, SocialType socialType, Optional<User> byEmail) {

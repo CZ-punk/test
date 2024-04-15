@@ -6,8 +6,10 @@ import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.service.UserService;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
+import com.cos.security1.jwt.InMemoryTokenStore;
 import com.cos.security1.jwt.JwtService;
 import com.cos.security1.oauth2.CustomOAuth2User;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.InvalidObjectException;
+import java.util.Map;
 import java.util.Optional;
 
 @Controller
@@ -36,6 +39,7 @@ public class UserController {
     private final UserService userService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final GoogleTokenRepository googleTokenRepository;
+    private final InMemoryTokenStore tokenStore;
     private static final String GOOGLE_LOGIN_FORM = "/oauth2/authorization/google";
 
     private final AuthenticationManager authenticationManager;
@@ -74,20 +78,35 @@ public class UserController {
     }
 
     @GetMapping("/add/google")
-    public void addGoogle(HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+    public void addGoogle(@RequestParam("nickname") String nickname, HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+
+        //@RequestBody Map<String, String> payload,
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        log.info("Authentication saved to SecurityContext in thread: " + Thread.currentThread().getName());
-
-        log.info("authentication: {}", authentication);
+        log.info("add/google 의 userDetails: {}", userDetails);
 
         if (authentication == null) {
-            new InvalidObjectException("유저객체 없음.");
-            return;
+            throw new InvalidObjectException("유저객체 없음.");
+        }
+
+//        String nickname = payload.get("nickname");
+
+//        String nickname = request.getHeader("nickname");
+
+        String token = request.getHeader("Authorization");
+
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            tokenStore.storeToken(nickname, token);
+            log.info("Token stored for user {}", nickname);
+        } else {
+            log.warn("Bearer token not found in request");
         }
 
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
+
 
     @ResponseBody
     @GetMapping("/login/google/success")

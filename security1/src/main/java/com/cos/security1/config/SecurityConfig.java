@@ -1,4 +1,4 @@
-package com.cos.security1;
+package com.cos.security1.config;
 
 import com.cos.security1.jwt.JwtService;
 import com.cos.security1.jwt.filter.CustomJsonUsernamePasswordAuthenticationFilter;

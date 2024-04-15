@@ -1,10 +1,17 @@
 package com.cos.security1.google;
 
+import com.cos.security1.domain.email.Email;
+import com.cos.security1.domain.email.repository.EmailRepository;
+import com.cos.security1.domain.mail.Mail;
+import com.cos.security1.domain.mail.MailRepository;
+import com.cos.security1.domain.user.entity.User;
+import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.google.form.ListForm;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.oauth2.CustomOAuth2User;
 import com.google.api.services.gmail.model.Message;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -13,8 +20,12 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,13 +37,89 @@ public class GoogleController {
 
     private final GmailService gmailService;
     private final GoogleTokenRepository googleTokenRepository;
+    private final UserRepository userRepository;
     private final OAuth2AuthorizedClientService authorizedClientService;
+    private final EmailRepository emailRepository;
+
     private static final String GOOGLE = "google";
+
+    /**
+     * 프론트 용 db 메일
+     * // 프론트에서 소셜로그인이든 google 계정을 등록하든 oauth2 인증을 거쳐 성공하면 /api/mail/db 를 단 1회만 호출
+     * // 그 후 db로 접근하는 url 인 /api/mails 를 nickname 을 json 으로 보낸 POST 요청 시
+     * // 해당 user 의 nickname 과 관련된 모든 메일을 보낸다.
+     */
+
+    /**
+     * 메일 송신할 때 프론트로부터 이메일 정보를 받든, 클라이언트 id 를 받든 하자.
+     * 클라이언트 ID 를 추천 ( 프론트와 상의 )
+     *
+     * 새 메일을 작성해서 보내는 send 하고
+     * 답장으로 보내는 send 구분
+     */
+
+
+
+
+    // 새로운 메일 작성
+    @ResponseBody
+    @PostMapping("/api/send_mail")
+    public ResponseEntity<Message> sendMail(@RequestParam("clientId") String clientId, @RequestParam("to") String to,
+                                            @RequestParam("subject") String subject, @RequestParam("bodyText") String bodyText, @RequestParam("attachment") MultipartFile attachment) throws Exception {
+
+        String accessToken = googleTokenRepository.findByClient(clientId)
+                .map(GoogleTokenDto::getAccessToken)
+                .orElse(null);
+        String myEmail = emailRepository.findBySocialId(clientId)
+                .map(Email::getEmail)
+                .orElse(null);
+
+        if (accessToken == null || myEmail == null) {
+            throw new Exception("accessToken: " + accessToken + ", myEmail: " + myEmail);
+        }
+
+        log.info("send mail body: {}, {}, {}, {}, {}", clientId, to, subject, bodyText, attachment);
+
+        log.info("send_mail: accessToken: {}", accessToken);
+        log.info("send_mail: myEmail: {}", myEmail);
+
+
+        Message message = gmailService.sendEmail(accessToken, to, myEmail, subject, bodyText, attachment);
+        return ResponseEntity.ok(message);
+    }
+
+    @ResponseBody
+    @PostMapping("/api/mails")
+    public List<Mail> getMail(@RequestBody Map<String, String> body) {
+
+        String nickname = body.get("nickname");
+        Optional<User> findUser = userRepository.findByNickname(nickname);
+        if (findUser.isEmpty()) {
+            log.info("byClient.isEmpty: {}", findUser);
+        }
+
+        List<Email> emailList = findUser.get().getEmailList();
+
+        List<Mail> mails = new ArrayList<>();
+
+        for (Email email : emailList) {
+            List<Mail> mailList = email.getMail();
+            log.info("EmailList 의 email: {}", email);
+            mails.addAll(mailList);
+        }
+        log.info("User 의 emailList: {}", emailList);
+        log.info("EmailList 들의 MailList: {}", mails);
+
+        return mails;
+    }
+
+
+
+
 
     /**
      *  프론트에서는 직접 토큰값을 넘겨주기 때문에 이것을 PathVariable 또는헤더로 받자
      */
-
     @ResponseBody
     @PostMapping("/api/mail_list")
     public ResponseEntity<List> getMailList(@RequestBody Map<String, String> body) throws IOException {
@@ -49,6 +136,8 @@ public class GoogleController {
 
         return ResponseEntity.ok(listForm);
     }
+
+
 
     @ResponseBody
     @PostMapping("/api/mail_list/mail_detail")
@@ -67,7 +156,21 @@ public class GoogleController {
 
 
 
-    
+    @ResponseBody
+    @PostMapping("/api/mail/db")
+    public List<Mail> setMailDB(@RequestBody Map<String, String> body) throws IOException {
+
+        String clientId = body.get("clientId");
+        Optional<GoogleTokenDto> byClient = googleTokenRepository.findByClient(clientId);
+        if (byClient.isEmpty()) {
+            log.info("byClient.isEmpty: {}", byClient);
+            return null;
+        }
+
+        gmailService.addDBMail(byClient.get().getAccessToken());
+
+        return byClient.get().getMail();
+    }
 
     /**
      * 확인용 메서드
@@ -90,7 +193,6 @@ public class GoogleController {
         List<ListForm> listForm = gmailService.fetchInboxBasicMessage(client.getAccessToken().getTokenValue());
         log.info("listForm: {}", listForm);
         return ResponseEntity.ok(listForm);
-
     }
 
     // 테스트 결과 0.6초
@@ -115,3 +217,37 @@ public class GoogleController {
     }
 
 }
+
+
+/**
+ *
+ *  @ResponseBody
+ *     @PostMapping("/api/send_reply")
+ *     public ResponseEntity<Message> sendReply(@RequestParam("clientId") String clientId, @RequestParam("to") String to,
+ *                                             @RequestParam("subject") String subject, @RequestParam("bodyText") String bodyText,
+ *                                             @RequestParam("inReplyTo") String inReplyTo, @RequestParam("references") String references , @RequestParam("attachment") MultipartFile attachment) throws Exception {
+ *
+ *
+ *         String accessToken = googleTokenRepository.findByClient(clientId)
+ *                 .map(GoogleTokenDto::getAccessToken)
+ *                 .orElse(null);
+ *         String myEmail = emailRepository.findBySocialId(clientId)
+ *                 .map(Email::getEmail)
+ *                 .orElse(null);
+ *
+ *         if (accessToken == null || myEmail == null) {
+ *             throw new Exception("accessToken: " + accessToken + ", myEmail: " + myEmail);
+ *         }
+ *
+ *         log.info("send mail body: {}, {}, {}, {}, {}", clientId, to, subject, bodyText, attachment);
+ *
+ *         log.info("send_mail: accessToken: {}", accessToken);
+ *         log.info("send_mail: myEmail: {}", myEmail);
+ *
+ *
+ *         Message message = gmailService.sendReplyEmail(accessToken, to, myEmail, subject, bodyText, inReplyTo, references);
+ *         return ResponseEntity.ok(message);
+ *     }
+ *
+ *
+ */

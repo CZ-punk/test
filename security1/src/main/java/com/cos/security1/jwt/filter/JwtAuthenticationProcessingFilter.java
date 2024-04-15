@@ -1,5 +1,6 @@
 package com.cos.security1.jwt.filter;
 
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.jwt.JwtService;
 import com.cos.security1.jwt.util.PasswordUtil;
@@ -21,6 +22,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.io.InvalidObjectException;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -39,13 +41,20 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
+
+        log.info("doFilterInternal: authentication: {}", SecurityContextHolder.getContext().getAuthentication());
+
+
         if (isOAuth2AuthenticationRequest(request)) {
             filterChain.doFilter(request, response);
+            log.info("isOAuth2AuthenticationRequest 지나갑니다~~");
             return;
         }
 
         if (isPermittedRequest(request)) {
             filterChain.doFilter(request, response); // "/login" 요청이 들어오면, 다음 필터 호출
+            log.info("isPermittedRequest 지나갑니다~~");
             return; // return으로 이후 현재 필터 진행 막기 (안해주면 아래로 내려가서 계속 필터 진행시킴)
         }
 
@@ -58,11 +67,26 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
             return;
         }
 
+        /**
+         *
+         * access TOken 이 null 이면
+         */
 
         if (accessToken == null) {
             try {
+                String token = jwtService.extractAccessToken(request).orElse(null);
 
-                Optional<String> emailClaim = jwtService.getEmailClaim(accessToken);
+                if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                if (token == null) {
+                    // exception 처리 해당 토큰은 유효하지 않다고 오류 제공하고 리턴
+                    throw new InvalidObjectException("토큰이 없거나 내가 만든 토큰이 아니에요.");
+                }
+
+                Optional<String> emailClaim = jwtService.getEmailClaim(token);
                 Optional<User> user = userRepository.findByEmail(emailClaim.get());
                 String refreshToken = user.get().getRefreshToken();
 
@@ -77,8 +101,6 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
                 
                 // user 가 가지고 있는 리프레쉬 토큰이 유효하지 않다면..
                 else {
-                    
-                    // 몰라 씨발 안짜
                     
                 }
             } catch (Exception e) {

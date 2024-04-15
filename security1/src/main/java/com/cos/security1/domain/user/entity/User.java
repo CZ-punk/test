@@ -1,6 +1,7 @@
 package com.cos.security1.domain.user.entity;
 
 import com.cos.security1.domain.email.Email;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +37,7 @@ public class User {
     private String refreshToken; // 리프레시 토큰
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Email> emailList = new ArrayList<>();
 
     public void addEmail(Email email) {

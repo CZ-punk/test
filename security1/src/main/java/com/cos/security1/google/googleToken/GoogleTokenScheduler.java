@@ -1,6 +1,12 @@
 package com.cos.security1.google.googleToken;
 
+import com.cos.security1.domain.mail.Mail;
+import com.cos.security1.domain.mail.MailRepository;
+import com.cos.security1.google.GmailService;
 import com.google.api.client.json.Json;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePartHeader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONObject;
@@ -10,7 +16,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 
@@ -20,6 +28,7 @@ import java.util.Map;
 public class GoogleTokenScheduler {
 
     private final GoogleTokenRepository googleTokenRepository;
+    private final MailRepository mailRepository;
     private RestTemplate restTemplate = new RestTemplate();
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -33,7 +42,7 @@ public class GoogleTokenScheduler {
         Iterable<GoogleTokenDto> tokenList = googleTokenRepository.findAll();
 
         for (GoogleTokenDto token : tokenList) {
-            if (token.isTokenExpired()) {
+            if (!token.isTokenExpired()) {
                 log.info("Token for client {} is expired. Refreshing...", token.getClient());
 
                 JSONObject requestJson = new JSONObject();
@@ -70,4 +79,67 @@ public class GoogleTokenScheduler {
         }
     }
 
+    @Scheduled(fixedDelay = 100000000)
+    public void UpdateMailDB() {
+
+
+        log.info("Mail DB Update start");
+        List<GoogleTokenDto> allTokens = googleTokenRepository.findAll();
+
+        for (GoogleTokenDto token : allTokens) {
+            try {
+                log.info("update Mail DB: {}", token);
+                Gmail gmailService = GmailService.getGmailService(token.getAccessToken());
+                String userId = "me";
+
+                //List<Message> messages =
+                gmailService.users().messages().list(userId)
+                        .setLabelIds(Collections.singletonList("INBOX"))
+                        .setQ("-category:promotions -category:social").execute().getMessages()
+                        .parallelStream().forEach(message -> {
+
+                            Message msg = null;
+                            try {
+                                msg = gmailService.users().messages().get(userId, message.getId()).setFormat("full").execute();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            String subject = null, from = null, date = null;
+                            List<MessagePartHeader> headers = msg.getPayload().getHeaders();
+                            for (MessagePartHeader header : headers) {
+                                switch (header.getName()) {
+                                    case "Subject":
+                                        subject = header.getValue();
+                                        break;
+                                    case "From":
+                                        from = header.getValue();
+                                        break;
+                                    case "Date":
+                                        date = header.getValue();
+                                        break;
+                                }
+                            }
+
+                            boolean exists = mailRepository.existsByMessageId(msg.getId());
+                            if (!exists) {
+                                Mail mail = Mail.builder()
+                                        .messageId(msg.getId())
+                                        .mailFrom(from)
+                                        .receiveTime(date)
+                                        .contents(msg.getSnippet())
+                                        .googleTokenDto(token)
+                                        .subject(subject)
+                                        .build();
+                                mailRepository.save(mail);
+                            }
+
+                        });
+                }
+            catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        log.info("Mail DB Update End");
+    }
 }

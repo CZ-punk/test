@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface GoogleTokenRepository extends JpaRepository<GoogleTokenDto, Long> {
 
     Optional<GoogleTokenDto> findByClient(String client);
+    Optional<GoogleTokenDto> findByAccessToken(String accessToken);
 }

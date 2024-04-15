@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface EmailRepository extends JpaRepository<Email, Long> {
 
     Optional<Email> findById(Long id);
-    List<Email> findByNickname(String nickname);
+    Optional<Email> findBySocialId(String socialId);
 
     Optional<Email> findByEmail(String email);
 
