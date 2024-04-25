@@ -1,5 +1,6 @@
 package com.cos.security1.domain.mail;
 
+import com.cos.security1.domain.email.Email;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,5 @@ public interface MailRepository extends JpaRepository<Mail, Long> {
     boolean existsByMessageId(String messageId);
 
     Optional<Mail> findByGoogleTokenDto(GoogleTokenDto googleTokenDto);
+    Optional<Mail> findByEmail(Email email);
 }

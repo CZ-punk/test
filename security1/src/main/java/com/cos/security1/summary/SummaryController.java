@@ -32,8 +32,7 @@ public class SummaryController {
                 .speech(summaryInfo.getSpeech())
                 .length(summaryInfo.getLength())
                 .build();
-
-
+        
 
         ServerReceiveDto receiveDto = summaryService.getSummaryFromAiServer(sendDto);
         findMail.addSummaryContents(receiveDto.getSummary());

@@ -19,4 +19,9 @@ public class InMemoryTokenStore {
     public void removeToken(String key) {
         tokenStore.remove(key);
     }
+
+    public boolean isEmpty() {
+        return tokenStore.isEmpty();
+    }
+
 }

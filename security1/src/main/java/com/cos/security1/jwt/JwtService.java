@@ -111,6 +111,17 @@ public class JwtService {
         response.setHeader(refreshHeader, refreshToken);
     }
 
+    public void setAccessToken(String email, String accessToken) {
+        log.info("update refreshToken: {}", accessToken);
+        Optional<User> findUser = userRepository.findByEmail(email);
+        findUser
+                .ifPresentOrElse(
+                        user -> user.setAccessToken(accessToken),
+                        () -> new Exception("일치하는 회원이 없습니다.")
+                );
+        userRepository.saveAndFlush(findUser.get());
+    }
+
     public void updateUserRefreshToken(String email, String refreshToken) {
         log.info("update refreshToken: {}", refreshToken);
         Optional<User> findUser = userRepository.findByEmail(email);

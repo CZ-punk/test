@@ -36,6 +36,9 @@ public class User {
 
     private String refreshToken; // 리프레시 토큰
 
+    @Setter
+    private String accessToken;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Email> emailList = new ArrayList<>();
@@ -56,4 +59,7 @@ public class User {
     public void updateRefreshToken(String updateRefreshToken) {
         this.refreshToken = updateRefreshToken;
     }
+
+
+
 }

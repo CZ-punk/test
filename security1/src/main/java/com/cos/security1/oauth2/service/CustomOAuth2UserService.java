@@ -25,6 +25,7 @@ import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserServ
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,17 +61,28 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         SocialType socialType = getSocialType(registrationId);
 
-        String nickname = attributes.get("name").toString();
-        String token = tokenStore.getToken(nickname);
 
-        if (token != null) {
-            log.info("oauth2 token: {}", token);
+
+        if (!tokenStore.isEmpty()) {
+            log.info("token store 안에 뭐가 있다고? {}", tokenStore);
+            String nickname = attributes.get("name").toString();
+            String token = tokenStore.getToken(nickname);
             tokenStore.removeToken("nickname");
-            Optional<User> findUser = userRepository.findByNickname(nickname);
+            log.info("oauth2 nickname: {}", nickname);
+            log.info("oauth2 token: {}", token);
 
+            if (token == null) {
+                OAuth2Error oauth2Error = new OAuth2Error("Not Matching nickname", "google attributes name != /add/google param nickname", null);
+                throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+            }
+
+
+            Optional<User> findUser = userRepository.findByAccessToken(token);
+            log.info("token store 에서 findUser 가 뭐가 나와? {}", findUser.get());
             return NormalUserUpdateEmail(userRequest, findUser);
 
         }
+
 
         /**
          * 만약 user Details 의 객체가
@@ -202,15 +214,17 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private CustomOAuth2User NormalUserUpdateEmail(OAuth2UserRequest userRequest, Optional<User> findUser) {
 
-
         OAuth2User oAuth2User = createdOAuth2User(userRequest);
         Map<String, Object> attributes = oAuth2User.getAttributes();
         String userNameAttributeName = userRequest.getClientRegistration()
                 .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
 
         OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
+        log.info("extractAttributes: {}", extractAttributes);
 
         Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, findUser);
+
+
         return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
                 attributes,
                 extractAttributes.getNameAttributeKey(),

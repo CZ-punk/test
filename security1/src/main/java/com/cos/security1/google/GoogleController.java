@@ -7,6 +7,7 @@ import com.cos.security1.domain.mail.MailRepository;
 import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.google.form.ListForm;
+import com.cos.security1.google.form.SendForm;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.oauth2.CustomOAuth2User;
@@ -25,10 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Controller
 @Slf4j
@@ -59,59 +57,91 @@ public class GoogleController {
      */
 
 
+//    @ResponseBody
+//    @PostMapping("/apiapiwef")
+//    public ResponseEntity<?> apiwewe() {
+//
+//        Email email = emailRepository.findByEmail("email").orElse(null);
+//        if (email == null) {
+//            throw new IllegalArgumentException();
+//        }
+//        googleTokenRepository.findByClient(email.getSocialId());
+//
+//        return (ResponseEntity<?>) ResponseEntity.ok();
+//    }
 
 
     // 새로운 메일 작성
     @ResponseBody
     @PostMapping("/api/send_mail")
-    public ResponseEntity<Message> sendMail(@RequestParam("clientId") String clientId, @RequestParam("to") String to,
-                                            @RequestParam("subject") String subject, @RequestParam("bodyText") String bodyText, @RequestParam("attachment") MultipartFile attachment) throws Exception {
+    public ResponseEntity<Message> sendMail(@ModelAttribute SendForm sendForm) throws Exception {
 
-        String accessToken = googleTokenRepository.findByClient(clientId)
+        Long userId = userRepository.findByEmail(sendForm.getUser())
+                .map(User::getId)
+                .orElse(null);
+
+
+        log.info("userId: {}", userId);
+
+
+        String sender = sendForm.getSender();
+        Email sendEmail = emailRepository.findByEmail(sendForm.getSender()).orElse(null);
+
+        Long userIdByEmail = sendEmail.getUser().getId();
+        log.info("userIdByEmail: {}", userIdByEmail);
+
+        if (userId != userIdByEmail) {
+            log.info("접근할 수 없는 이메일 계정입니다. 등록 후 사용해주세요.");
+            throw new IOException("접근 불가 이메일, 등록 후 사용 바람.");
+        }
+        if (sendEmail == null) {
+            log.info("등록되지 않은 이메일입니다: {}", sender);
+            throw new Exception("등록되지 않은 이메일입니다.");
+        }
+
+
+        String accessToken = googleTokenRepository.findByClient(sendEmail.getSocialId())
                 .map(GoogleTokenDto::getAccessToken)
                 .orElse(null);
-        String myEmail = emailRepository.findBySocialId(clientId)
-                .map(Email::getEmail)
-                .orElse(null);
 
-        if (accessToken == null || myEmail == null) {
-            throw new Exception("accessToken: " + accessToken + ", myEmail: " + myEmail);
+        if (accessToken == null || sendEmail.getEmail() == null) {
+            throw new Exception("accessToken: " + accessToken + ", myEmail: " + sendEmail.getEmail());
         }
 
-        log.info("send mail body: {}, {}, {}, {}, {}", clientId, to, subject, bodyText, attachment);
-
-        log.info("send_mail: accessToken: {}", accessToken);
-        log.info("send_mail: myEmail: {}", myEmail);
+        log.info("send mail body: {}, {}, {}, {}", sendForm.getReceiver(), sendForm.getSubject(), sendForm.getContents(), sendForm.getAttachment());
+        log.info("send_mail: myEmail: {}", sender);
 
 
-        Message message = gmailService.sendEmail(accessToken, to, myEmail, subject, bodyText, attachment);
+        Message message = gmailService.sendEmail(accessToken, sendForm.getReceiver(), sender, sendForm.getSubject(), sendForm.getContents(), sendForm.getAttachment());
         return ResponseEntity.ok(message);
+
+
     }
 
-    @ResponseBody
-    @PostMapping("/api/mails")
-    public List<Mail> getMail(@RequestBody Map<String, String> body) {
-
-        String nickname = body.get("nickname");
-        Optional<User> findUser = userRepository.findByNickname(nickname);
-        if (findUser.isEmpty()) {
-            log.info("byClient.isEmpty: {}", findUser);
-        }
-
-        List<Email> emailList = findUser.get().getEmailList();
-
-        List<Mail> mails = new ArrayList<>();
-
-        for (Email email : emailList) {
-            List<Mail> mailList = email.getMail();
-            log.info("EmailList 의 email: {}", email);
-            mails.addAll(mailList);
-        }
-        log.info("User 의 emailList: {}", emailList);
-        log.info("EmailList 들의 MailList: {}", mails);
-
-        return mails;
-    }
+//    @ResponseBody
+//    @PostMapping("/api/mails")
+//    public List<Mail> getMail(@RequestBody Map<String, String> body) {
+//
+//        String nickname = body.get("nickname");
+//        Optional<User> findUser = userRepository.findByNickname(nickname);
+//        if (findUser.isEmpty()) {
+//            log.info("byClient.isEmpty: {}", findUser);
+//        }
+//
+//        List<Email> emailList = findUser.get().getEmailList();
+//
+//        List<Mail> mails = new ArrayList<>();
+//
+//        for (Email email : emailList) {
+//            List<Mail> mailList = email.getMail();
+//            log.info("EmailList 의 email: {}", email);
+//            mails.addAll(mailList);
+//        }
+//        log.info("User 의 emailList: {}", emailList);
+//        log.info("EmailList 들의 MailList: {}", mails);
+//
+//        return mails;
+//    }
 
 
 
@@ -124,65 +154,65 @@ public class GoogleController {
     @PostMapping("/api/mail_list")
     public ResponseEntity<List> getMailList(@RequestBody Map<String, String> body) throws IOException {
 
-        String clientId = body.get("clientId");
-        Optional<GoogleTokenDto> byClient = googleTokenRepository.findByClient(clientId);
-        if (byClient.isEmpty()) {
-            log.info("byClient.isEmpty: {}", byClient);
+        String userEmail = body.get("user_email");
+        User findUser = userRepository.findByEmail(userEmail).orElse(null);
+        if (findUser == null) {
+            log.info("해당 user 에 대한 이메일은 존재하지 않습니다.");
             return null;
         }
-
-        List<ListForm> listForm = gmailService.fetchInboxBasicMessage(byClient.get().getAccessToken());
-        log.info("listForm: {}", listForm);
-
-        return ResponseEntity.ok(listForm);
-    }
-
-
-
-    @ResponseBody
-    @PostMapping("/api/mail_list/mail_detail")
-    public ResponseEntity<Message> getDetailMail(@RequestBody Map<String, String> body) throws IOException {
-
-        String clientId = body.get("clientId");
-        String messageId = body.get("messageId");
-        Optional<GoogleTokenDto> byClient = googleTokenRepository.findByClient(clientId);
-        if (byClient.isEmpty()) {
-            log.info("byClient.isEmpty: {}", byClient);
-            return null;
+        List<Email> emailList = findUser.getEmailList();
+        List<Mail> result = new ArrayList<>();
+        for (Email email : emailList) {
+            List<Mail> mailList = email.getMail();
+            result.addAll(mailList);
         }
 
-        return ResponseEntity.ok(gmailService.getMailById(byClient.get().getAccessToken(), messageId));
+        return ResponseEntity.ok(result);
     }
 
-
+//    @ResponseBody
+//    @PostMapping("/api/mail_list/mail_detail")
+//    public ResponseEntity<Message> getDetailMail(@RequestBody Map<String, String> body) throws IOException {
+//
+//        String userEmail = body.get("user_email");
+//        String messageId = body.get("messageId");
+//        Optional<GoogleTokenDto> byClient = googleTokenRepository.findByClient(clientId);
+//        if (byClient.isEmpty()) {
+//            log.info("byClient.isEmpty: {}", byClient);
+//            return null;
+//        }
+//
+//        return ResponseEntity.ok(gmailService.getMailById(byClient.get().getAccessToken(), messageId));
+//    }
 
     @ResponseBody
     @PostMapping("/api/mail/db")
     public List<Mail> setMailDB(@RequestBody Map<String, String> body) throws IOException {
 
-        String clientId = body.get("clientId");
-        Optional<GoogleTokenDto> byClient = googleTokenRepository.findByClient(clientId);
-        if (byClient.isEmpty()) {
-            log.info("byClient.isEmpty: {}", byClient);
+        String email = body.get("email");
+        Email findEmail = emailRepository.findByEmail(email).orElse(null);
+        if (findEmail == null) {
+            log.info("존재하지 않는 이메일입니다.");
+            return null;
+        }
+        GoogleTokenDto googleToken = googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null);
+        if (googleToken == null) {
+            log.info("googleToken.isEmpty");
             return null;
         }
 
-        gmailService.addDBMail(byClient.get().getAccessToken());
-
-        return byClient.get().getMail();
+        gmailService.addDBMail(googleToken.getAccessToken());
+        return googleToken.getMail();
     }
 
     /**
      * 확인용 메서드
      */
     @GetMapping("/confirm")
-    public ResponseEntity<?> confirmPayload(@AuthenticationPrincipal CustomOAuth2User oAuth2User) throws IOException {
+    public ResponseEntity<?> confirmPayload(String accessToken) throws IOException {
 
-        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, oAuth2User.getName());
-        log.info("Authenticated User name: {}", oAuth2User.getName());
-        List<Message> messages = gmailService.confirmProject(client.getAccessToken().getTokenValue());
-        log.info("AccessToken: {}\n", client.getAccessToken().getTokenValue());
 
+        List<Message> messages = gmailService.confirmProject(accessToken);
         return ResponseEntity.ok(messages);
     }
 

@@ -38,18 +38,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             log.info("OAuth2 성공 핸들러: {}", response);
             log.info("OAuth2 성공 핸들러: {}", authentication);
 
-
-            // get Email 을 통해 어떤 레포지토리에 있는 지 확인 후 넣자.
-            log.info("get Class? {}",oAuth2User.getEmail());
-
             if (userRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
                 loginSuccess(response, oAuth2User);
             }
-
             if (emailRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
                 addSuccess(response, oAuth2User);
             }
-
             response.sendRedirect("/login/google/success");
 
         } catch (Exception e) {
@@ -68,6 +62,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         response.addHeader(jwtService.getRefreshHeader(), "Bearer " + refreshToken);
 
         jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
+        jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
         jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
 
     }
@@ -75,8 +70,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private void addSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User) throws IOException {
 
         log.info("OAuth2 Add Success !");
-        log.info("OAuth2 Add Success !", oAuth2User.getName());
-        log.info("OAuth2 Add Success !", oAuth2User.getEmail());
+        log.info("OAuth2 Add Success ! {}", oAuth2User.getName());
+        log.info("OAuth2 Add Success ! {}", oAuth2User.getEmail());
 
 
 

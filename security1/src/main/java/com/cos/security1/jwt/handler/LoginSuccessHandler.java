@@ -42,6 +42,7 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
         userRepository.findByEmail(email)
                 .ifPresent(user -> {
+                    user.setAccessToken(accessToken);
                     user.updateRefreshToken(refreshToken);
                     userRepository.saveAndFlush(user);
                 });

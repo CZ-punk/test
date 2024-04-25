@@ -7,12 +7,8 @@ import com.cos.security1.oauth2.info.NaverOAuth2UserInfo;
 import com.cos.security1.oauth2.info.OAuth2UserInfo;
 import com.cos.security1.domain.user.entity.Role;
 import com.cos.security1.domain.user.entity.SocialType;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;

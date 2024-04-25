@@ -46,7 +46,7 @@ public class UserController {
     private final JwtService jwtService;
 
     @PostMapping("/sign-up")
-    public ResponseEntity<UserSignDto> signUp(@RequestBody UserSignDto userSignDto, HttpServletResponse response) throws Exception {
+    public ResponseEntity<UserSignDto> signUp(@RequestBody UserSignDto userSignDto) throws Exception {
         userService.signUp(userSignDto);
         return ResponseEntity.ok(userSignDto);
     }
@@ -77,10 +77,8 @@ public class UserController {
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
 
-    @GetMapping("/add/google")
-    public void addGoogle(@RequestParam("nickname") String nickname, HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
-
-        //@RequestBody Map<String, String> payload,
+    @GetMapping("/add/google2")
+    public void addGoogle2(@RequestParam("nickname") String nickname, HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -90,12 +88,31 @@ public class UserController {
             throw new InvalidObjectException("유저객체 없음.");
         }
 
-//        String nickname = payload.get("nickname");
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            tokenStore.storeToken(nickname, token);
+            log.info("Token stored for user {}", nickname);
+        } else {
+            log.warn("Bearer token not found in request");
+        }
 
-//        String nickname = request.getHeader("nickname");
+        response.sendRedirect(GOOGLE_LOGIN_FORM);
+    }
+
+    @PostMapping("/add/google")
+    public void addGoogle(@RequestBody Map<String, String> body, HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String nickname = body.get("nickname");
+
+        log.info("add/google 의 userDetails: {}", userDetails);
+
+        if (authentication == null) {
+            throw new InvalidObjectException("유저객체 없음.");
+        }
 
         String token = request.getHeader("Authorization");
-
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
             tokenStore.storeToken(nickname, token);
@@ -108,14 +125,13 @@ public class UserController {
     }
 
 
+
     @ResponseBody
     @GetMapping("/login/google/success")
-    public GoogleTokenDto OAuth2loginSuccess(OAuth2AuthenticationToken authentication) {
+    public String OAuth2loginSuccess(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName());
-
-        log.info("authentication: {}", authentication);
 
         if (client == null) {
             throw new IllegalStateException("클라이언트 정보를 찾을 수 없습니다.");
@@ -144,32 +160,8 @@ public class UserController {
             tokenDto.setClient(authentication.getName());
         }
 
-
         googleTokenRepository.save(tokenDto);
-
-
-        return tokenDto;
-    }
-
-
-    @ResponseBody
-    @GetMapping("/user/info")
-    public String userInfo(@AuthenticationPrincipal UserDetails userDetails) {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        log.info("user/info: {}", authentication);
-
-        if (userDetails != null) {
-            // 사용자가 로그인한 상태
-
-            String username = userDetails.getUsername();
-            log.info("로그인 상태임, {}", username);
-            // 추가적인 사용자 정보 처리...
-        } else {
-            log.info("로그인 상태가 아님");
-            // 사용자가 로그인하지 않은 상태
-        }
-        return "userInfo";
+        return authentication.getPrincipal().getAttributes().get("email").toString();
     }
 
     @PostMapping("/login")
@@ -178,12 +170,5 @@ public class UserController {
         return ResponseEntity.ok(loginUser);
 
     }
-    @ResponseBody
-    @GetMapping("/jwt-test")
-    public String jwtTest() {
-        return "jwtTest 요청 성공";
-    }
-
-
 
 }

@@ -76,11 +76,6 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
             try {
                 String token = jwtService.extractAccessToken(request).orElse(null);
 
-                if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
                 if (token == null) {
                     // exception 처리 해당 토큰은 유효하지 않다고 오류 제공하고 리턴
                     throw new InvalidObjectException("토큰이 없거나 내가 만든 토큰이 아니에요.");
@@ -112,7 +107,7 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
 
     private boolean isPermittedRequest (HttpServletRequest request){
         String requestURI = request.getRequestURI();
-        return requestURI.equals(NO_CHECK_URL) || requestURI.equals(SIGN_UP) || requestURI.equals("/") || requestURI.startsWith("/login/google");
+        return requestURI.equals(NO_CHECK_URL) || requestURI.equals(SIGN_UP) || requestURI.equals("/") || requestURI.startsWith("/login/google") || requestURI.isEmpty();
     }
 
     private boolean isOAuth2AuthenticationRequest (HttpServletRequest request){

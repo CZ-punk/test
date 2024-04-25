@@ -1,5 +1,7 @@
 package com.cos.security1.google.googleToken;
 
+import com.cos.security1.domain.email.Email;
+import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.mail.Mail;
 import com.cos.security1.domain.mail.MailRepository;
 import com.cos.security1.google.GmailService;
@@ -29,6 +31,7 @@ public class GoogleTokenScheduler {
 
     private final GoogleTokenRepository googleTokenRepository;
     private final MailRepository mailRepository;
+    private final EmailRepository emailRepository;
     private RestTemplate restTemplate = new RestTemplate();
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -79,7 +82,7 @@ public class GoogleTokenScheduler {
         }
     }
 
-    @Scheduled(fixedDelay = 100000000)
+    @Scheduled(fixedDelay = 30000_000)
     public void UpdateMailDB() {
 
 
@@ -91,6 +94,11 @@ public class GoogleTokenScheduler {
                 log.info("update Mail DB: {}", token);
                 Gmail gmailService = GmailService.getGmailService(token.getAccessToken());
                 String userId = "me";
+                Email findEmail = emailRepository.findBySocialId(token.getClient()).orElse(null);
+                if (findEmail == null) {
+                    log.info("findEmail 을 못찾았어!!!!!!!!!!!!!!!!!!!!");
+                    return;
+                }
 
                 //List<Message> messages =
                 gmailService.users().messages().list(userId)
@@ -130,7 +138,9 @@ public class GoogleTokenScheduler {
                                         .contents(msg.getSnippet())
                                         .googleTokenDto(token)
                                         .subject(subject)
+                                        .email(findEmail)
                                         .build();
+
                                 mailRepository.save(mail);
                             }
 
