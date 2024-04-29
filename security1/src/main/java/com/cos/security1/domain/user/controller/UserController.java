@@ -1,8 +1,11 @@
 package com.cos.security1.domain.user.controller;
 
+import com.cos.security1.domain.email.Email;
+import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.user.dto.LoginForm;
 import com.cos.security1.domain.user.dto.UserSignDto;
 import com.cos.security1.domain.user.entity.User;
+import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.domain.user.service.UserService;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
@@ -13,6 +16,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,6 +46,9 @@ public class UserController {
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final GoogleTokenRepository googleTokenRepository;
     private final InMemoryTokenStore tokenStore;
+    private final EmailRepository emailRepository;
+    private final UserRepository userRepository;
+
     private static final String GOOGLE_LOGIN_FORM = "/oauth2/authorization/google";
 
     private final AuthenticationManager authenticationManager;
@@ -70,10 +78,12 @@ public class UserController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication.isAuthenticated() && authentication != null && !(authentication instanceof AnonymousAuthenticationToken)) {
             OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("google", authentication.getName());
+            log.info("로그인 구글의 {}", authorizedClient);
             if (authorizedClient != null) {
+                log.info("잘 들어왔니?");
                 response.sendRedirect(GOOGLE_LOGIN_FORM);
             }
-            log.info("뭐냐 시발 여기 왜 안 동작해? ㅋㅋ");
+            return;
         }
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
@@ -129,42 +139,30 @@ public class UserController {
 
     @ResponseBody
     @GetMapping("/login/google/success")
-    public ResponseEntity<?> OAuth2loginSuccess(OAuth2AuthenticationToken authentication) {
+    public ResponseEntity<?> OAuth2loginSuccess(OAuth2AuthenticationToken authentication) throws Exception {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName());
+
 
         if (client == null) {
             throw new IllegalStateException("클라이언트 정보를 찾을 수 없습니다.");
         }
 
-        String accessToken = client.getAccessToken().getTokenValue();
-        String refreshToken = client.getRefreshToken() != null ? client.getRefreshToken().getTokenValue() : null;
-
-        GoogleTokenDto tokenDto = null;
-        Optional<GoogleTokenDto> findClient = googleTokenRepository.findByClient(authentication.getName());
-
-
-        if (findClient.isPresent()) {
-            // 이미 존재하는 경우, 기존 객체를 업데이트
-            tokenDto = findClient.get();
-            tokenDto.setAccessToken(accessToken);
-            tokenDto.setRefreshToken(refreshToken);
-            tokenDto.setTokenExpiresAt(client.getAccessToken().getExpiresAt().toEpochMilli());
-
-        } else {
-            // 새로운 객체를 생성
-            tokenDto = new GoogleTokenDto();
-            tokenDto.setAccessToken(accessToken);
-            tokenDto.setRefreshToken(refreshToken);
-            tokenDto.setTokenExpiresAt(client.getAccessToken().getExpiresAt().toEpochMilli());
-            tokenDto.setClient(authentication.getName());
+        GoogleTokenDto findDTO = googleTokenRepository.findByClient(authentication.getName()).orElse(null);
+        Email findEmail = emailRepository.findBySocialId(findDTO.getClient()).orElse(null);
+        User findUser = findEmail.getUser();
+        if (findUser == null) {
+            throw new Exception();
         }
 
-        googleTokenRepository.save(tokenDto);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", findUser.getAccessToken());
+        log.info("로그인 구글 석세스 헤더 설정: {}", findUser.getAccessToken());
         HashMap<Object, Object> responseBody = new HashMap<>();
         responseBody.put("email", authentication.getPrincipal().getAttributes().get("email").toString());
-        return ResponseEntity.ok(responseBody);
+        return new ResponseEntity<>(responseBody, headers, HttpStatus.OK);
     }
 
     @PostMapping("/login")
