@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.InvalidObjectException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -128,7 +129,7 @@ public class UserController {
 
     @ResponseBody
     @GetMapping("/login/google/success")
-    public String OAuth2loginSuccess(OAuth2AuthenticationToken authentication) {
+    public ResponseEntity<?> OAuth2loginSuccess(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName());
@@ -161,7 +162,9 @@ public class UserController {
         }
 
         googleTokenRepository.save(tokenDto);
-        return authentication.getPrincipal().getAttributes().get("email").toString();
+        HashMap<Object, Object> responseBody = new HashMap<>();
+        responseBody.put("email", authentication.getPrincipal().getAttributes().get("email").toString());
+        return ResponseEntity.ok(responseBody);
     }
 
     @PostMapping("/login")
