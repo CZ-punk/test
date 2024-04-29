@@ -73,7 +73,7 @@ public class UserController {
             if (authorizedClient != null) {
                 response.sendRedirect(GOOGLE_LOGIN_FORM);
             }
-            return;
+            log.info("뭐냐 시발 여기 왜 안 동작해? ㅋㅋ");
         }
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }

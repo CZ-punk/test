@@ -216,13 +216,24 @@ public class GoogleController {
         return ResponseEntity.ok(messages);
     }
 
-    @GetMapping("/gmail/list")
-    public ResponseEntity<List> getMailBox(@AuthenticationPrincipal CustomOAuth2User oAuth2User) throws  IOException {
+//    @GetMapping("/gmail/list")
+//    public ResponseEntity<List> getMailBox(String email) throws  IOException {
+//
+//        googleTokenRepository.findBy
+//        List<ListForm> listForm = gmailService.fetchInboxBasicMessage(client.getAccessToken().getTokenValue());
+//        log.info("listForm: {}", listForm);
+//        return ResponseEntity.ok(listForm);
+//    }
 
-        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(GOOGLE, oAuth2User.getName());
-        List<ListForm> listForm = gmailService.fetchInboxBasicMessage(client.getAccessToken().getTokenValue());
-        log.info("listForm: {}", listForm);
-        return ResponseEntity.ok(listForm);
+    @GetMapping("/api/test")
+    public ResponseEntity<?> apiTest(String email) throws IOException {
+        Email findEmail = emailRepository.findByEmail(email).orElse(null);
+        GoogleTokenDto findDTO = googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null);
+
+
+        List<ListForm> result = gmailService.fetchInboxBasicMessage(findDTO.getAccessToken());
+        return ResponseEntity.ok(result);
+
     }
 
     // 테스트 결과 0.6초
