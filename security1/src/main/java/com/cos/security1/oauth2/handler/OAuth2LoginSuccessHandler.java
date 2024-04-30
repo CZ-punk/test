@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 @Slf4j
@@ -41,7 +43,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         try {
 
             log.info("OAuth2SuccessHandler: {}", authentication);
-
+            String redirectUrl = "/login/google/success";
             CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
             log.info("OAuth2 성공 핸들러: {}", request);
@@ -50,13 +52,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
 
             if (userRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
-                loginSuccess(response, oAuth2User);
+                loginSuccess(response, oAuth2User, redirectUrl);
             }
             if (emailRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
                 addSuccess(response, oAuth2User);
             }
             addGoogleTokenDTO(oAuth2User);
-            response.sendRedirect("/login/google/success");
+
+
+//            log.info("oauth2 success redirectUri: {}", redirectUrl);
+            response.sendRedirect(redirectUrl);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -64,7 +69,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     // TODO : 소셜 로그인 시에도 무조건 토큰 생성하지 말고 JWT 인증 필터처럼 RefreshToken 유/무에 따라 다르게 처리
-    private void loginSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User) throws IOException {
+    private void loginSuccess(HttpServletResponse response, CustomOAuth2User oAuth2User, String redirectUrl) throws IOException {
 
         log.info("OAuth2 Login Success !");
 
@@ -77,6 +82,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
         jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
         jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
+
+//        redirectUrl += "?access_token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8) + "&email=" + oAuth2User.getEmail();
     }
 
 
@@ -127,8 +134,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         }
 
         googleTokenRepository.saveAndFlush(tokenDto);
-
-
     }
 
 }

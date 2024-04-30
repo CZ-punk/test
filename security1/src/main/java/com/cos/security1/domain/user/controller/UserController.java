@@ -30,9 +30,12 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.io.IOException;
 import java.io.InvalidObjectException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -80,7 +83,6 @@ public class UserController {
             OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient("google", authentication.getName());
             log.info("로그인 구글의 {}", authorizedClient);
             if (authorizedClient != null) {
-                log.info("잘 들어왔니?");
                 response.sendRedirect(GOOGLE_LOGIN_FORM);
             }
             return;
@@ -136,10 +138,8 @@ public class UserController {
     }
 
 
-
-    @ResponseBody
     @GetMapping("/login/google/success")
-    public ResponseEntity<?> OAuth2loginSuccess(OAuth2AuthenticationToken authentication) throws Exception {
+    public void OAuth2loginSuccess(OAuth2AuthenticationToken authentication, HttpServletResponse response) throws Exception {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName());
@@ -156,14 +156,23 @@ public class UserController {
             throw new Exception();
         }
 
+        String redirectUrl = "/success" +
+                String.format("?access_token=%s&email=%s",
+                        URLEncoder.encode(findUser.getAccessToken(), StandardCharsets.UTF_8),
+                        URLEncoder.encode(authentication.getPrincipal().getAttributes().get("email").toString(), StandardCharsets.UTF_8));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", findUser.getAccessToken());
-        log.info("로그인 구글 석세스 헤더 설정: {}", findUser.getAccessToken());
-        HashMap<Object, Object> responseBody = new HashMap<>();
-        responseBody.put("email", authentication.getPrincipal().getAttributes().get("email").toString());
-        return new ResponseEntity<>(responseBody, headers, HttpStatus.OK);
+        log.info("redirectUrl = {}", redirectUrl);
+        response.sendRedirect(redirectUrl);
     }
+
+//
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.add("Authorization", findUser.getAccessToken());
+//        log.info("로그인 구글 석세스 헤더 설정: {}", findUser.getAccessToken());
+//        HashMap<Object, Object> responseBody = new HashMap<>();
+//        responseBody.put("email", authentication.getPrincipal().getAttributes().get("email").toString());
+
+
 
     @PostMapping("/login")
     public ResponseEntity<User> login(LoginForm loginForm) throws Exception {
