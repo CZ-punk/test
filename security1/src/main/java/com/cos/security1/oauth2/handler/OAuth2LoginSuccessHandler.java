@@ -1,6 +1,7 @@
 package com.cos.security1.oauth2.handler;
 
 import com.cos.security1.domain.email.repository.EmailRepository;
+import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
@@ -73,9 +74,21 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         log.info("OAuth2 Login Success !");
 
+        String accessToken = null;
+        String refreshToken = null;
 
-        String accessToken = jwtService.createAccessToken(oAuth2User.getEmail());
-        String refreshToken = jwtService.createRefreshToken(oAuth2User.getEmail());
+        User byEmail = userRepository.findByEmail(oAuth2User.getEmail()).orElse(null);
+        if (byEmail != null) {
+            boolean tokenValid = jwtService.isTokenValid(byEmail.getAccessToken());
+            if (!tokenValid) {
+                accessToken = jwtService.createAccessToken(oAuth2User.getEmail());
+                refreshToken = jwtService.createRefreshToken(oAuth2User.getEmail());
+            } else {
+                accessToken = byEmail.getAccessToken();
+                refreshToken = byEmail.getRefreshToken();
+            }
+        }
+
         response.addHeader(jwtService.getAccessHeader(), "Bearer " + accessToken);
         response.addHeader(jwtService.getRefreshHeader(), "Bearer " + refreshToken);
 
@@ -83,7 +96,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
         jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
 
-//        redirectUrl += "?access_token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8) + "&email=" + oAuth2User.getEmail();
+        // accessToken 값이 valid 하면 값 변경X
     }
 
 

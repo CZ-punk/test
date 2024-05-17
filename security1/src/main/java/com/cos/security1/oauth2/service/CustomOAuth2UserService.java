@@ -3,23 +3,18 @@ package com.cos.security1.oauth2.service;
 import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.user.entity.User;
-import com.cos.security1.jwt.InMemoryTokenStore;
-import com.cos.security1.jwt.service.LoginService;
+import com.cos.security1.jwt.InMemoryAccountStore;
 import com.cos.security1.oauth2.CustomOAuth2User;
 import com.cos.security1.oauth2.OAuthAttributes;
 import com.cos.security1.domain.user.entity.SocialType;
 import com.cos.security1.domain.user.repository.UserRepository;
-import com.cos.security1.oauth2.info.OAuth2UserInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -29,13 +24,8 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
-import javax.swing.text.html.Option;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -45,7 +35,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private final UserRepository userRepository;
     private final EmailRepository emailRepository;
-    private final InMemoryTokenStore tokenStore;
+    private final InMemoryAccountStore accountStore;
 
     private static final String NAVER = "naver";
     private static final String GOOGLE = "google";
@@ -62,58 +52,102 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         SocialType socialType = getSocialType(registrationId);
 
 
+        //==============================================================================================//
+        // add google 호출시 동작
 
-        if (!tokenStore.isEmpty()) {
-            log.info("token store 안에 뭐가 있다고? {}", tokenStore);
-            String nickname = attributes.get("name").toString();
-            String token = tokenStore.getToken(nickname);
-            tokenStore.removeToken("nickname");
-            log.info("oauth2 nickname: {}", nickname);
-            log.info("oauth2 token: {}", token);
+        if (!accountStore.isEmpty()) {
 
-            if (token == null) {
-                OAuth2Error oauth2Error = new OAuth2Error("Not Matching nickname", "google attributes name != /add/google param nickname", null);
-                throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+            List<User> all = userRepository.findAll();
+            ArrayList<Long> userIds = new ArrayList<>();
+            for (User user : all) {
+                userIds.add(user.getId());
+            }
+            String value = null;
+            for (Long userId : userIds) {
+                if (accountStore.containsKey(userId)) {
+                    value = accountStore.get(userId);
+                    log.info("loadUser.AccountStore.get(): {}", value);
+                    accountStore.remove(userId);
+                    break;
+                }
+            }
+            if (value == null) {
+                throw new OAuth2AuthenticationException(
+                        "일치하는 userId 가 존재하지 않습니다.\n" +
+                                "로그인한 계정의 이메일을 정확히 보냈는지 확인해주시길 바랍니다.");
             }
 
+            User findUser = userRepository.findByEmail(value).orElse(null);
+            log.info("AccountStore.value findUser: {}", findUser);
 
-            Optional<User> findUser = userRepository.findByAccessToken(token);
-            log.info("token store 에서 findUser 가 뭐가 나와? {}", findUser.get());
-            return NormalUserUpdateEmail(userRequest, findUser);
+            return NormalUserUpdateEmail(userRequest, Optional.of(findUser));
 
         }
 
-
-        /**
-         * 만약 user Details 의 객체가
-         */
+        //==============================================================================================//
 
         log.info("oAuth2User.getName, {}", oAuth2User.getName());
         log.info("attributes: {}", attributes);
 
+        String socialId = oAuth2User.getName();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User findUser = userRepository.findBySocialTypeAndSocialId(SocialType.GOOGLE, socialId).orElse(null);
 
-
-        if (socialType == SocialType.GOOGLE) {
-            Optional<Email> existingEmail = emailRepository.findBySocialTypeAndSocialId(socialType, attributes.get("sub").toString());
-            log.info("OAuth2 로그인 요청: {}", existingEmail);
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            log.info("authentcaiton 구조: {}", authentication);
-
-            if (existingEmail.isPresent()) {
-                return updateEmail(userRequest, authentication);
+        if (findUser == null) {
+            if (authentication == null) {
+                return createdCustomOAuth2User(userRequest);
             } else {
-
-                if (authentication != null && authentication.isAuthenticated() && !(authentication instanceof AnonymousAuthenticationToken)) {
-                    return updateEmail(userRequest, authentication);
-
-                } else {
-                    return createdCustomOAuth2User(userRequest);
-                }
+                // 클라이언트에게 적절한 오류 메시지 전달
+                OAuth2Error oauth2Error = new OAuth2Error("Authentication Error",
+                        "이미 Authentication 객체가 존재합니다." +
+                                " 이메일을 추가 등록하길 원하면 add/google 을 시도하시고, " +
+                                " 새로 로그인하길 원하면 /logout 후 재시도 하시길 바랍니다.",
+                        null);
+                throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
             }
         }
+        else if (findUser != null) {
+            if (authentication == null) {
+                return createdCustomOAuth2User(userRequest);
+            }
+            log.info("LoadUser.SecurityContext {}", authentication.getName());
+            log.info("LoadUser.findUser.getEmail(): {}", findUser.getEmail());
+
+            // 기존 db 에 있는 계정과 security 인증 객체가 동일.
+            if (SecurityContextHolder.getContext().getAuthentication().getName().equals(findUser.getSocialId())) {
+                return createdCustomOAuth2User(userRequest);
+                // 소셜Id 가 같으니 같은 계정이므로 그냥 새로 업데이트하고 끝
+            } else {
+                return updateEmail(userRequest, authentication);
+                // authentication 이 존재하는데 userRequest 와 다른 계정일 때. 추가 이메일을 등록.
+            }
+        }
+
+        //==============================================================================================//
+
         return (OAuth2User) new OAuth2AuthenticationException("google 과 naver 가 아닌 다른 플랫폼은 지원하지 않습니다.");
     }
 
+
+    private CustomOAuth2User NormalUserUpdateEmail(OAuth2UserRequest userRequest, Optional<User> findUser) {
+
+        OAuth2User oAuth2User = createdOAuth2User(userRequest);
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+        String userNameAttributeName = userRequest.getClientRegistration()
+                .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+
+        OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
+        log.info("extractAttributes: {}", extractAttributes);
+
+        Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, findUser);
+
+
+        return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
+                attributes,
+                extractAttributes.getNameAttributeKey(),
+                createdEmail.getEmail(),
+                createdEmail.getRole());
+    }
 
     private CustomOAuth2User updateEmail(OAuth2UserRequest userRequest, Authentication authentication) throws Exception {
 
@@ -212,26 +246,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 //        }
     }
 
-    private CustomOAuth2User NormalUserUpdateEmail(OAuth2UserRequest userRequest, Optional<User> findUser) {
-
-        OAuth2User oAuth2User = createdOAuth2User(userRequest);
-        Map<String, Object> attributes = oAuth2User.getAttributes();
-        String userNameAttributeName = userRequest.getClientRegistration()
-                .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
-
-        OAuthAttributes extractAttributes = OAuthAttributes.of(SocialType.GOOGLE, userNameAttributeName, attributes);
-        log.info("extractAttributes: {}", extractAttributes);
-
-        Email createdEmail = getEmail(extractAttributes, SocialType.GOOGLE, findUser);
-
-
-        return new CustomOAuth2User(Collections.singleton(new SimpleGrantedAuthority(createdEmail.getRole().getKey())),
-                attributes,
-                extractAttributes.getNameAttributeKey(),
-                createdEmail.getEmail(),
-                createdEmail.getRole());
-    }
-
 
 
     private CustomOAuth2User createdCustomOAuth2User(OAuth2UserRequest userRequest) {
@@ -300,7 +314,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     }
 
     private Email getEmail(OAuthAttributes attributes, SocialType socialType, Optional<User> byEmail) {
-        Email findEmail = emailRepository.findBySocialTypeAndSocialId(socialType,
+        Email findEmail = emailRepository.findBySocialTypeAndSocialId(
+                socialType,
                 attributes.getOAuth2UserInfo().getId()).orElse(null);
 
         if (findEmail == null) {

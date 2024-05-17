@@ -20,4 +20,6 @@ public interface EmailRepository extends JpaRepository<Email, Long> {
     Optional<Email> findByRefreshToken(String refreshToken);
     Optional<Email> findBySocialTypeAndSocialId(SocialType socialType, String socialId);
 
+    List<Email> findListByUserId(Long userId);
+
 }

@@ -48,12 +48,14 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
 
         if (isOAuth2AuthenticationRequest(request)) {
             filterChain.doFilter(request, response);
+            log.info("what does request? {}", request.getRequestURI());
             log.info("isOAuth2AuthenticationRequest 지나갑니다~~");
             return;
         }
 
         if (isPermittedRequest(request)) {
             filterChain.doFilter(request, response); // "/login" 요청이 들어오면, 다음 필터 호출
+            log.info("what does request? {}", request.getRequestURI());
             log.info("isPermittedRequest 지나갑니다~~");
             return; // return으로 이후 현재 필터 진행 막기 (안해주면 아래로 내려가서 계속 필터 진행시킴)
         }
@@ -63,6 +65,7 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
                 .orElse(null);
 
         if (accessToken != null) {
+            log.info("what does request? {}", request.getRequestURI());
             checkAccessTokenAndAuthentication(request, response, filterChain);
             return;
         }
@@ -75,7 +78,7 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
         if (accessToken == null) {
             try {
                 String token = jwtService.extractAccessToken(request).orElse(null);
-
+                log.info("what does request? {}", request.getRequestURI());
                 if (token == null) {
                     // exception 처리 해당 토큰은 유효하지 않다고 오류 제공하고 리턴
                     throw new InvalidObjectException("토큰이 없거나 내가 만든 토큰이 아니에요.");
@@ -107,7 +110,14 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
 
     private boolean isPermittedRequest (HttpServletRequest request){
         String requestURI = request.getRequestURI();
-        return requestURI.equals(NO_CHECK_URL) || requestURI.equals(SIGN_UP) || requestURI.equals("/") || requestURI.startsWith("/login/google") || requestURI.isEmpty();
+        return requestURI.equals(NO_CHECK_URL) ||
+                requestURI.equals(SIGN_UP) ||
+                requestURI.equals("/") ||
+                requestURI.startsWith("/login/google") ||
+                requestURI.isEmpty() ||
+                requestURI.startsWith("/success") ||
+                requestURI.startsWith("/favicon.ico") ||
+                requestURI.startsWith("/logout");
     }
 
     private boolean isOAuth2AuthenticationRequest (HttpServletRequest request){

@@ -9,15 +9,12 @@ import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.domain.user.service.UserService;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
-import com.cos.security1.jwt.InMemoryTokenStore;
+import com.cos.security1.jwt.InMemoryAccountStore;
 import com.cos.security1.jwt.JwtService;
-import com.cos.security1.oauth2.CustomOAuth2User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,15 +27,12 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.view.RedirectView;
 
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Controller
 @Slf4j
@@ -48,7 +42,7 @@ public class UserController {
     private final UserService userService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final GoogleTokenRepository googleTokenRepository;
-    private final InMemoryTokenStore tokenStore;
+    private final InMemoryAccountStore loginAccount;
     private final EmailRepository emailRepository;
     private final UserRepository userRepository;
 
@@ -91,36 +85,39 @@ public class UserController {
     }
 
     @GetMapping("/add/google2")
-    public void addGoogle2(@RequestParam("nickname") String nickname, HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+    public void addGoogle2(HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         log.info("add/google 의 userDetails: {}", userDetails);
-
         if (authentication == null) {
             throw new InvalidObjectException("유저객체 없음.");
         }
 
+        String loginAccount = null;
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
-            tokenStore.storeToken(nickname, token);
-            log.info("Token stored for user {}", nickname);
         } else {
-            log.warn("Bearer token not found in request");
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
         }
 
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 계정은 존재하지 않습니다. loginAccount: " + loginAccount);
+        }
+        loginAccount = findUser.getEmail();
+        Long findId = findUser.getId();
+        this.loginAccount.store(findId, loginAccount);
+        log.info("User.getId() as Key: " + findId + ", LoginAccount as Value: " + loginAccount);
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
 
     @PostMapping("/add/google")
-    public void addGoogle(@RequestBody Map<String, String> body, HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+    public void addGoogle(HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String nickname = body.get("nickname");
-
         log.info("add/google 의 userDetails: {}", userDetails);
-
         if (authentication == null) {
             throw new InvalidObjectException("유저객체 없음.");
         }
@@ -128,12 +125,15 @@ public class UserController {
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
-            tokenStore.storeToken(nickname, token);
-            log.info("Token stored for user {}", nickname);
         } else {
-            log.warn("Bearer token not found in request");
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
         }
-
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+        this.loginAccount.store(findUser.getId(), findUser.getEmail());
+        log.info("User.getId() as Key: " + findUser.getId() + "LoginAccount as Value: " + findUser.getEmail());
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
 
@@ -144,6 +144,7 @@ public class UserController {
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName());
 
+        log.info("/success url client: {}", client);
 
         if (client == null) {
             throw new IllegalStateException("클라이언트 정보를 찾을 수 없습니다.");
@@ -161,11 +162,20 @@ public class UserController {
                         URLEncoder.encode(findUser.getAccessToken(), StandardCharsets.UTF_8),
                         URLEncoder.encode(authentication.getPrincipal().getAttributes().get("email").toString(), StandardCharsets.UTF_8));
 
+
         log.info("redirectUrl = {}", redirectUrl);
+        response.setStatus(HttpServletResponse.SC_OK);
         response.sendRedirect(redirectUrl);
     }
 
-//
+    @GetMapping("/success")
+    public ResponseEntity success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email) {
+        System.out.println(accessToken);
+        System.out.println(email);
+        return ResponseEntity.ok("success");
+    }
+
+
 //        HttpHeaders headers = new HttpHeaders();
 //        headers.add("Authorization", findUser.getAccessToken());
 //        log.info("로그인 구글 석세스 헤더 설정: {}", findUser.getAccessToken());
@@ -178,7 +188,13 @@ public class UserController {
     public ResponseEntity<User> login(LoginForm loginForm) throws Exception {
         User loginUser = userService.login(loginForm);
         return ResponseEntity.ok(loginUser);
-
     }
 
+    @ResponseBody
+    @GetMapping("/logout/success")
+    public String logout() {
+        // 로그아웃 후 처리 로직 작성
+        return "Success Logout!";
+
+    }
 }

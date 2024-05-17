@@ -13,6 +13,7 @@ import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.oauth2.CustomOAuth2User;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -55,20 +56,6 @@ public class GoogleController {
      * 새 메일을 작성해서 보내는 send 하고
      * 답장으로 보내는 send 구분
      */
-
-
-//    @ResponseBody
-//    @PostMapping("/apiapiwef")
-//    public ResponseEntity<?> apiwewe() {
-//
-//        Email email = emailRepository.findByEmail("email").orElse(null);
-//        if (email == null) {
-//            throw new IllegalArgumentException();
-//        }
-//        googleTokenRepository.findByClient(email.getSocialId());
-//
-//        return (ResponseEntity<?>) ResponseEntity.ok();
-//    }
 
 
     // 새로운 메일 작성
@@ -187,22 +174,77 @@ public class GoogleController {
 
     @ResponseBody
     @PostMapping("/api/mail/db")
-    public List<Mail> setMailDB(@RequestBody Map<String, String> body) throws IOException {
+    public List<List<Mail>> setMailDB(HttpServletRequest request) throws IOException {
 
-        String email = body.get("email");
-        Email findEmail = emailRepository.findByEmail(email).orElse(null);
-        if (findEmail == null) {
-            log.info("존재하지 않는 이메일입니다.");
-            return null;
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
         }
-        GoogleTokenDto googleToken = googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null);
-        if (googleToken == null) {
-            log.info("googleToken.isEmpty");
-            return null;
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+        // 이 메서드 호출시 accessToken 과 관련된 User 와 연관관계에 있는 모든 Email Entity 들을 대상으로 api 호출해서 db 초기화.
+        Long userId = findUser.getId();
+        List<Email> emailList = emailRepository.findListByUserId(userId);
+        log.info("/api/mail/db . emailList: {}",emailList);
+        if (emailList.isEmpty()) {
+            throw new IllegalStateException("AccessToken 의 userId 와 일치하는 Email 이 존재하지 않습니다.");
         }
 
-        gmailService.addDBMail(googleToken.getAccessToken());
-        return googleToken.getMail();
+        List<List<Mail>> result = new ArrayList<>();
+        ArrayList<GoogleTokenDto> googleTokenList = new ArrayList<>();
+        for (Email findEmail : emailList) {
+            googleTokenList.add(googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null));
+        }
+        for (GoogleTokenDto googleTokenDto : googleTokenList) {
+            if (googleTokenDto == null) {
+                log.info("해당 google 계정에 문제가 발생하였습니다. {}", googleTokenDto);
+            }
+            gmailService.addDBMail(googleTokenDto.getAccessToken());
+            result.add(googleTokenDto.getMail());
+        }
+        return result;
+    }
+
+
+    @ResponseBody
+    @GetMapping("/get/api/mail/db")
+    public List<List<Mail>> setMailDBget(HttpServletRequest request) throws IOException {
+
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
+        }
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+        // 이 메서드 호출시 accessToken 과 관련된 User 와 연관관계에 있는 모든 Email Entity 들을 대상으로 api 호출해서 db 초기화.
+        Long userId = findUser.getId();
+        List<Email> emailList = emailRepository.findListByUserId(userId);
+        log.info("/api/mail/db . emailList: {}",emailList);
+        if (emailList.isEmpty()) {
+            throw new IllegalStateException("AccessToken 의 userId 와 일치하는 Email 이 존재하지 않습니다.");
+        }
+
+        List<List<Mail>> result = new ArrayList<>();
+        ArrayList<GoogleTokenDto> googleTokenList = new ArrayList<>();
+        for (Email findEmail : emailList) {
+            googleTokenList.add(googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null));
+        }
+        for (GoogleTokenDto googleTokenDto : googleTokenList) {
+            if (googleTokenDto == null) {
+                log.info("해당 google 계정에 문제가 발생하였습니다. {}", googleTokenDto);
+            }
+            gmailService.addDBMail(googleTokenDto.getAccessToken());
+            result.add(googleTokenDto.getMail());
+        }
+        return result;
     }
 
     /**
