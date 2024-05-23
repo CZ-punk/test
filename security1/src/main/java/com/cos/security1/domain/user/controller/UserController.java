@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 @Controller
 @Slf4j
@@ -169,10 +168,10 @@ public class UserController {
     }
 
     @GetMapping("/success")
-    public ResponseEntity success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email) {
+    public String success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email) {
         System.out.println(accessToken);
         System.out.println(email);
-        return ResponseEntity.ok("success");
+        return "/web/auth";
     }
 
 

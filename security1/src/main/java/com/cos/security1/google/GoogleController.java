@@ -61,15 +61,13 @@ public class GoogleController {
     // 새로운 메일 작성
     @ResponseBody
     @PostMapping("/api/send_mail")
-    public ResponseEntity<Message> sendMail(@ModelAttribute SendForm sendForm) throws Exception {
+    public ResponseEntity<SendForm> sendMail(@ModelAttribute SendForm sendForm) throws Exception {
 
         Long userId = userRepository.findByEmail(sendForm.getUser())
                 .map(User::getId)
                 .orElse(null);
 
-
         log.info("userId: {}", userId);
-
 
         String sender = sendForm.getSender();
         Email sendEmail = emailRepository.findByEmail(sendForm.getSender()).orElse(null);
@@ -100,8 +98,7 @@ public class GoogleController {
 
 
         Message message = gmailService.sendEmail(accessToken, sendForm.getReceiver(), sender, sendForm.getSubject(), sendForm.getContents(), sendForm.getAttachment());
-        return ResponseEntity.ok(message);
-
+        return ResponseEntity.ok(sendForm);
 
     }
 
