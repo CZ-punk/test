@@ -1,9 +1,31 @@
-<!DOCTYPE html>
-<title>Authentication complete</title>
-<p>Authentication is complete. If this does not happen automatically, please close the window.
-    <script>
-        window.opener.postMessage({
-            'flutter-web-auth': window.location.href
-        }, window.location.origin);
-        window.close();
-    </script>
+<!--<!DOCTYPE html>-->
+<!--<title>Authentication complete</title>-->
+<!--<p>Authentication is complete. If this does not happen automatically, please close the window.-->
+<!--    <script>-->
+<!--        window.opener.postMessage({-->
+<!--            'flutter-web-auth': window.location.href-->
+<!--        }, window.location.origin);-->
+<!--        window.close();-->
+<!--    </script>-->
+
+<!--<!DOCTYPE html>-->
+<!--<html>-->
+<!--<head>-->
+<!--    <title>Login Success</title>-->
+<!--    <script type="text/javascript">-->
+<!--        window.onload = function() {-->
+<!--            alert("${message}");-->
+<!--            window.close();-->
+<!--        };-->
+<!--    </script>-->
+<!--</head>-->
+<!--<body>-->
+<!--</body>-->
+<!--</html>-->
+
+<script>
+    window.opener.postMessage({
+        'flutter-web-auth': window.location.href
+    }, '*');
+    window.close();
+</script>
