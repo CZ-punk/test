@@ -16,7 +16,8 @@ public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.getWriter().write("Social Login Fail ! Confirm Server Log..");
+        response.sendRedirect("/fail/google");
         log.info("소셜 로그인에 실패했습니다. 에러 메시지: {}", exception.getMessage());
+
     }
 }

@@ -1,31 +1,66 @@
-<!--<!DOCTYPE html>-->
-<!--<title>Authentication complete</title>-->
-<!--<p>Authentication is complete. If this does not happen automatically, please close the window.-->
-<!--    <script>-->
-<!--        window.opener.postMessage({-->
-<!--            'flutter-web-auth': window.location.href-->
-<!--        }, window.location.origin);-->
-<!--        window.close();-->
-<!--    </script>-->
+
+
+<!--<script>-->
+<!--    window.opener.postMessage({-->
+<!--        'flutter-web-auth': window.location.href-->
+<!--    }, 'summail://');-->
+<!--    window.close();-->
+<!--</script>-->
+
 
 <!--<!DOCTYPE html>-->
-<!--<html>-->
+<!--<html lang="ko">-->
 <!--<head>-->
-<!--    <title>Login Success</title>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>로그인 성공</title>-->
 <!--    <script type="text/javascript">-->
 <!--        window.onload = function() {-->
-<!--            alert("${message}");-->
+<!--            alert("로그인에 성공했습니다. 이 창은 곧 닫힙니다.");-->
 <!--            window.close();-->
 <!--        };-->
 <!--    </script>-->
 <!--</head>-->
 <!--<body>-->
+<!--<p>로그인에 성공했습니다. 이 창은 곧 닫힙니다.</p>-->
 <!--</body>-->
 <!--</html>-->
 
-<script>
-    window.opener.postMessage({
-        'flutter-web-auth': window.location.href
-    }, 'summail://');
-    window.close();
-</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Success</title>
+    <script type="text/javascript">
+        window.onload = function() {
+            alert("Login successful. This window will close shortly.");
+            window.close();
+        };
+    </script>
+</head>
+<body>
+<p>Login successful. This window will close shortly.</p>
+</body>
+</html>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Success</title>
+    <script type="text/javascript">
+        window.onload = function() {
+            if (window.navigator.userAgent.includes('Flutter')) {
+                // 플러터 웹뷰에서 실행 중임을 확인합니다.
+                window.location.href = 'flutter://close';
+            } else {
+                alert("Login successful. This window will close shortly.");
+                window.close();
+            }
+        };
+    </script>
+</head>
+<body>
+<p>Login successful. This window will close shortly.</p>
+</body>
+</html>

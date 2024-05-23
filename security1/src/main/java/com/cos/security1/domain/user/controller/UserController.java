@@ -168,10 +168,18 @@ public class UserController {
     }
 
     @GetMapping("/success")
-    public String success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email) {
+    public void success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email, HttpServletResponse response) throws IOException {
         System.out.println(accessToken);
         System.out.println(email);
-        return "web/auth";
+        response.sendRedirect("summail://success?" +
+                "access_token=" + accessToken +
+                "&email=" + email);
+
+    }
+
+    @GetMapping("/fail/google")
+    public void fail(HttpServletResponse response) throws IOException {
+        response.getWriter().write("Social Login Fail ! Confirm Server Log..");
     }
 
 
