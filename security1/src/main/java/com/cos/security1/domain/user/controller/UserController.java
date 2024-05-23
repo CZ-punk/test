@@ -26,6 +26,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -168,12 +169,14 @@ public class UserController {
     }
 
     @GetMapping("/success")
-    public void success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email, HttpServletResponse response) throws IOException {
+    public String success(Model model, @RequestParam("access_token") String accessToken, @RequestParam("email") String email, HttpServletResponse response) throws IOException {
         System.out.println(accessToken);
         System.out.println(email);
-        response.sendRedirect("summail://success?" +
-                "access_token=" + accessToken +
-                "&email=" + email);
+        String redirectUrl = "summail://success?" +
+                "access_token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8) +
+                "&email=" + URLEncoder.encode(email, StandardCharsets.UTF_8);
+        model.addAttribute("redirectUrl", redirectUrl);
+        return "web/intercept";
 
     }
 

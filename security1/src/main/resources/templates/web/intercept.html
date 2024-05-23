@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>App으로 돌아가기</title>
+</head>
+<body>
+<h1>아래 버튼을 클릭하여 앱으로 돌아가세요.</h1>
+    <button onclick="redirectToApp()" data-th-url="${redirectUrl}">App으로 돌아가기</button>
+    <script th:inline="javascript">
+
+        function redirectToApp() {
+            var url = document.querySelector('button[data-url]').getAttribute('data-url') || 'defaultURL';
+            window.location.href = url;
+        }
+
+    </script>
+</body>
+</html>
