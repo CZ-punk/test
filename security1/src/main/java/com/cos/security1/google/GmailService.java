@@ -56,7 +56,7 @@ public class GmailService {
     public static Gmail getGmailService(String accessToken) throws IOException {
         Credential credential = new GoogleCredential().setAccessToken(accessToken);
         return new Gmail.Builder(new NetHttpTransport(), JSON_FACTORY, credential)
-                .setApplicationName("Konkuk")
+                .setApplicationName("summail")
                 .build();
     }
 
