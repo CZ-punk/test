@@ -171,7 +171,7 @@ public class UserController {
     public String success(@RequestParam("access_token") String accessToken, @RequestParam("email") String email) {
         System.out.println(accessToken);
         System.out.println(email);
-        return "/web/auth";
+        return "web/auth";
     }
 
 
