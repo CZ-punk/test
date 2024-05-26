@@ -12,6 +12,6 @@ public class ServerSendDto {
     private String speech;
     private String contents;
     private String subject;
-    private String length;
+    private int length;
 
 }

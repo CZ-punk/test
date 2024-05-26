@@ -51,12 +51,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             log.info("OAuth2 성공 핸들러: {}", response);
             log.info("OAuth2 성공 핸들러: {}", authentication);
 
-            // 토큰 검증 코드 추가
+            log.info("{} = 이름", oAuth2User.getAttributes().get("name"));
 
 
-
-            //=====//
-            
 
             if (emailRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
                 addSuccess(response, oAuth2User);
@@ -70,6 +67,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 log.info("redirect Success URL: {}", redirectUrl);
                 response.sendRedirect(redirectUrl);
             }
+
 
 
         } catch (Exception e) {
@@ -105,7 +103,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
         jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
 
-        return "summail://success?access_token=" + accessToken + "&email=" + oAuth2User.getEmail();
+        return "summail://success?access_token=" + accessToken + "&email=" + oAuth2User.getEmail() + "&username=" + oAuth2User.getAttributes().get("name");
 
         // accessToken 값이 valid 하면 값 변경X
     }

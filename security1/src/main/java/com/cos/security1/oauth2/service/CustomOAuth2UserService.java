@@ -97,13 +97,14 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             if (authentication == null) {
                 return createdCustomOAuth2User(userRequest);
             } else {
+                return createdCustomOAuth2User(userRequest);
                 // 클라이언트에게 적절한 오류 메시지 전달
-                OAuth2Error oauth2Error = new OAuth2Error("Authentication Error",
-                        "이미 Authentication 객체가 존재합니다." +
-                                " 이메일을 추가 등록하길 원하면 add/google 을 시도하시고, " +
-                                " 새로 로그인하길 원하면 /logout 후 재시도 하시길 바랍니다.",
-                        null);
-                throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+//                OAuth2Error oauth2Error = new OAuth2Error("Authentication Error",
+//                        "이미 Authentication 객체가 존재합니다." +
+//                                " 이메일을 추가 등록하길 원하면 add/google 을 시도하시고, " +
+//                                " 새로 로그인하길 원하면 /logout 후 재시도 하시길 바랍니다.",
+//                        null);
+//                throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
             }
         }
         else if (findUser != null) {

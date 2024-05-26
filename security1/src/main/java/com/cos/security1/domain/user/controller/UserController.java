@@ -57,19 +57,6 @@ public class UserController {
         return ResponseEntity.ok(userSignDto);
     }
 
-    @GetMapping("/securitycontext")
-    public ResponseEntity<?> confirm() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        log.info("authentcation: {}", authentication.getName());
-        log.info("authentcation: {}", authentication.getAuthorities());
-        log.info("authentcation: {}", authentication.getCredentials());
-        log.info("authentcation: {}", authentication.getDetails());
-        log.info("authentcation: {}", authentication.getPrincipal());
-
-
-        return ResponseEntity.ok(authentication);
-    }
-
     @GetMapping("/login/google")
     public void addEmail(HttpServletResponse response) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

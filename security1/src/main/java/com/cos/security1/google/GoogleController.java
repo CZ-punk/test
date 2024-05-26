@@ -8,6 +8,7 @@ import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.repository.UserRepository;
 import com.cos.security1.google.form.ListForm;
 import com.cos.security1.google.form.SendForm;
+import com.cos.security1.google.form.SpamForm;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.oauth2.CustomOAuth2User;
@@ -57,6 +58,54 @@ public class GoogleController {
      * 답장으로 보내는 send 구분
      */
 
+    // spam mail
+    @ResponseBody
+    @PostMapping("/api/spam_mail")
+    public List<List<SpamForm>> getSpam(HttpServletRequest request) throws IOException {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
+        }
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+
+        Long userId = findUser.getId();
+        List<Email> emailList = emailRepository.findListByUserId(userId);
+        log.info("/api/spam_mail emailList: {}", emailList);
+        if (emailList.isEmpty()) {
+            throw new IllegalStateException("AccessToken 의 userId 와 일치하는 Email 이 존재하지 않습니다.");
+        }
+
+        List<Message> spamMails = new ArrayList<>();
+        ArrayList<String> spamIds = new ArrayList<>();
+        ArrayList<GoogleTokenDto> googleTokenList = new ArrayList<>();
+        ArrayList<String> googleToken = new ArrayList<>();
+
+        for (Email findEmail : emailList) {
+            googleTokenList.add(googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null));
+        }
+        for (GoogleTokenDto googleTokenDto : googleTokenList) {
+            if (googleTokenDto == null) {
+                log.info("해당 google 계정에 문제가 발생하였습니다. {}", googleTokenDto);
+            }
+            spamMails = gmailService.getSpamMails(googleTokenDto.getAccessToken());
+            googleToken.add(googleTokenDto.getAccessToken());
+
+        }
+
+        List<List<SpamForm>> result = new ArrayList<>();
+        for (String gToken : googleToken) {
+            for (Message spamMail : spamMails) {
+                spamIds.add(spamMail.getId());
+                result.add(gmailService.fetchSpamEmailDetails(spamIds, gToken));
+            }
+        }
+        return result;
+    }
 
     // 새로운 메일 작성
     @ResponseBody

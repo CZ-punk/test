@@ -7,6 +7,6 @@ import lombok.Setter;
 @Setter
 public class SummaryInfo {
     private String messageId;
-    private String length;
+    private int length;
     private String speech;
 }

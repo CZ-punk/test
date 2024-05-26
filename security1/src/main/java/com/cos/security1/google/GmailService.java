@@ -7,6 +7,7 @@ import com.cos.security1.domain.mail.MailRepository;
 import com.cos.security1.domain.user.entity.Role;
 import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.google.form.ListForm;
+import com.cos.security1.google.form.SpamForm;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.google.api.client.auth.oauth2.Credential;
@@ -58,6 +59,38 @@ public class GmailService {
         return new Gmail.Builder(new NetHttpTransport(), JSON_FACTORY, credential)
                 .setApplicationName("summail")
                 .build();
+    }
+
+    public List<SpamForm> fetchSpamEmailDetails(List<String> spamIds, String accessToken) throws IOException {
+        Gmail gmail = getGmailService(accessToken);
+        List<SpamForm> emails = new ArrayList<>();
+
+        for (String id : spamIds) {
+            Message message = gmail.users().messages().get(userId, id).execute();
+
+            String subject = null;
+            String snippet = message.getSnippet(); // 메일의 간략한 내용
+            List<MessagePartHeader> headers = message.getPayload().getHeaders();
+            for (MessagePartHeader header : headers) {
+                if (header.getName().equals("Subject")) {
+                    subject = header.getValue();
+                    break;
+                }
+            }
+            emails.add(new SpamForm(id, subject, snippet));
+        }
+        return emails;
+    }
+
+    public List<Message> getSpamMails(String accessToken) throws IOException {
+        Gmail gmail = getGmailService(accessToken);
+        String query = "label:spam";
+
+        ListMessagesResponse response = gmail.users().messages().list(userId)
+                .setQ(query)
+                .setFields("messages(id,threadId), nextPageToken")
+                .execute();
+        return response.getMessages();
     }
 
 
