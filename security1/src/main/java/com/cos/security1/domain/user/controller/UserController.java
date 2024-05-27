@@ -109,6 +109,8 @@ public class UserController {
             throw new InvalidObjectException("유저객체 없음.");
         }
 
+        log.info("add/google 의 request header token: {}", request.getHeader("Authorization"));
+
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
