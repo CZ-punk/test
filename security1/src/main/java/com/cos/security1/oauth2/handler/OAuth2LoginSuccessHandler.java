@@ -103,7 +103,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
         jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
 
-        return "summail://success?access_token=" + accessToken + "&email=" + oAuth2User.getEmail() + "&username=" + oAuth2User.getAttributes().get("name");
+        String name = (String) oAuth2User.getAttributes().get("name");
+        String encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8);
+        System.out.println("encodedName = " + encodedName);
+
+
+        return "summail://success?access_token=" + accessToken + "&email=" + oAuth2User.getEmail() + "&username=" + encodedName;
 
         // accessToken 값이 valid 하면 값 변경X
     }
