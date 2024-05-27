@@ -151,12 +151,11 @@ public class GmailService {
     @Transactional
     public void addDBMail(String accessToken) throws IOException {
         Gmail gmail = getGmailService(accessToken);
-
-
         Optional<GoogleTokenDto> findToken = googleTokenRepository.findByAccessToken(accessToken);
         Optional<Email> findEmail = emailRepository.findBySocialId(findToken.get().getClient());
         List<Mail> tokenMailList = findToken.get().getMail();
         List<Mail> emailMailList = findEmail.get().getMail();
+        List<Mail> result = new ArrayList<>();
         gmail.users().messages().list(userId).setLabelIds(List.of("INBOX"))
                 .setQ("-category:promotions -category:social").execute()
                 .getMessages().parallelStream().forEach(message -> {
@@ -185,7 +184,6 @@ public class GmailService {
                         }
                     }
 
-
                     Mail mail = Mail.builder()
                             .messageId(msg.getId())
                             .mailFrom(from)
@@ -196,12 +194,13 @@ public class GmailService {
                             .subject(subject)
                             .build();
 
-                    mailRepository.save(mail);
-
-                    tokenMailList.add(mail);
-                    emailMailList.add(mail);
-                    log.info("\n\n");
+                    result.add(mail);
                 });
+        mailRepository.saveAll(result);
+        tokenMailList.addAll(result);
+        emailMailList.addAll(result);
+
+
     }
 
 
