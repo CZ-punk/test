@@ -185,7 +185,7 @@ public class GoogleController {
      */
     @ResponseBody
     @PostMapping("/api/mail_list")
-    public ResponseEntity<List> getMailList(HttpServletRequest request) throws IOException {
+    public List<Mail> getMailList(HttpServletRequest request) throws IOException {
 
 
         String token = request.getHeader("Authorization");
@@ -206,7 +206,7 @@ public class GoogleController {
             result.addAll(mailList);
         }
 
-        return ResponseEntity.ok(result);
+        return result;
     }
 
     @ResponseBody
