@@ -71,6 +71,28 @@ public class UserController {
         response.sendRedirect(GOOGLE_LOGIN_FORM);
     }
 
+    @GetMapping("/add/google")
+    public void addGoogle(HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
+
+
+        log.info("add/google 의 userDetails: {}", userDetails);
+        log.info("add/google 의 request header token: {}", request.getHeader("Authorization"));
+
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
+        }
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+        this.loginAccount.store(findUser.getId(), findUser.getEmail());
+        log.info("User.getId() as Key: " + findUser.getId() + "LoginAccount as Value: " + findUser.getEmail());
+        response.setHeader("Location", "ec2-13-125-246-135.ap-northeast-2.compute.amazonaws.com"+ GOOGLE_LOGIN_FORM);
+    }
+
 //    @GetMapping("/add/google2")
 //    public void addGoogle2(HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
 //
@@ -100,31 +122,7 @@ public class UserController {
 //        response.sendRedirect(GOOGLE_LOGIN_FORM);
 //    }
 
-    @GetMapping("/add/google")
-    public void addGoogle(HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        log.info("add/google 의 userDetails: {}", userDetails);
-        if (authentication == null) {
-            throw new InvalidObjectException("유저객체 없음.");
-        }
-
-        log.info("add/google 의 request header token: {}", request.getHeader("Authorization"));
-
-        String token = request.getHeader("Authorization");
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        } else {
-            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
-        }
-        User findUser = userRepository.findByAccessToken(token).orElse(null);
-        if (findUser == null) {
-            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
-        }
-        this.loginAccount.store(findUser.getId(), findUser.getEmail());
-        log.info("User.getId() as Key: " + findUser.getId() + "LoginAccount as Value: " + findUser.getEmail());
-        response.sendRedirect(GOOGLE_LOGIN_FORM);
-    }
 
 
     @GetMapping("/login/google/success")

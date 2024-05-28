@@ -57,8 +57,8 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(req -> req
                         .requestMatchers("/","/css/**","/images/**","/js/**","/favicon.ico").permitAll()
-                        .requestMatchers("/loginForm", "/login").permitAll()
-                        .requestMatchers("/sign-up").permitAll()
+                        .requestMatchers("/loginForm", "/login/**", "/oauth2/**", "/add/google").permitAll()
+                        .requestMatchers("/sign-up", "/oauth2/authorization/google").permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/")).permitAll()
                         .anyRequest().permitAll()
                 )
