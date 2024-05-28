@@ -27,10 +27,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class SecurityConfig {
 
     private final LoginService loginService;
