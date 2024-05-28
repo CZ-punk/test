@@ -116,8 +116,8 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
                 requestURI.startsWith("/success") ||
                 requestURI.startsWith("/favicon.ico") ||
                 requestURI.startsWith("/logout") ||
-                requestURI.startsWith("/add/google")
-                ;
+                requestURI.startsWith("/add/google") ||
+                requestURI.startsWith("/.env");
     }
 
     private boolean isOAuth2AuthenticationRequest (HttpServletRequest request){

@@ -93,35 +93,6 @@ public class UserController {
         response.setHeader("Location", "ec2-13-125-246-135.ap-northeast-2.compute.amazonaws.com"+ GOOGLE_LOGIN_FORM);
     }
 
-//    @GetMapping("/add/google2")
-//    public void addGoogle2(HttpServletRequest request, HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) throws IOException {
-//
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//
-//        log.info("add/google 의 userDetails: {}", userDetails);
-//        if (authentication == null) {
-//            throw new InvalidObjectException("유저객체 없음.");
-//        }
-//
-//        String loginAccount = null;
-//        String token = request.getHeader("Authorization");
-//        if (token != null && token.startsWith("Bearer ")) {
-//            token = token.substring(7);
-//        } else {
-//            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
-//        }
-//
-//        User findUser = userRepository.findByAccessToken(token).orElse(null);
-//        if (findUser == null) {
-//            throw new IllegalStateException("해당 계정은 존재하지 않습니다. loginAccount: " + loginAccount);
-//        }
-//        loginAccount = findUser.getEmail();
-//        Long findId = findUser.getId();
-//        this.loginAccount.store(findId, loginAccount);
-//        log.info("User.getId() as Key: " + findId + ", LoginAccount as Value: " + loginAccount);
-//        response.sendRedirect(GOOGLE_LOGIN_FORM);
-//    }
-
 
 
 

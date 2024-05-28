@@ -151,40 +151,10 @@ public class GoogleController {
 
     }
 
-//    @ResponseBody
-//    @PostMapping("/api/mails")
-//    public List<Mail> getMail(@RequestBody Map<String, String> body) {
-//
-//        String nickname = body.get("nickname");
-//        Optional<User> findUser = userRepository.findByNickname(nickname);
-//        if (findUser.isEmpty()) {
-//            log.info("byClient.isEmpty: {}", findUser);
-//        }
-//
-//        List<Email> emailList = findUser.get().getEmailList();
-//
-//        List<Mail> mails = new ArrayList<>();
-//
-//        for (Email email : emailList) {
-//            List<Mail> mailList = email.getMail();
-//            log.info("EmailList 의 email: {}", email);
-//            mails.addAll(mailList);
-//        }
-//        log.info("User 의 emailList: {}", emailList);
-//        log.info("EmailList 들의 MailList: {}", mails);
-//
-//        return mails;
-//    }
 
 
-
-
-
-    /**
-     *  프론트에서는 직접 토큰값을 넘겨주기 때문에 이것을 PathVariable 또는헤더로 받자
-     */
     @ResponseBody
-    @PostMapping("/api/mail_list")
+    @GetMapping("/api/mail_list")
     public List<Mail> getMailList(HttpServletRequest request) throws IOException {
 
 
@@ -246,21 +216,6 @@ public class GoogleController {
         return result;
     }
 
-//    @ResponseBody
-//    @PostMapping("/api/mail_list/mail_detail")
-//    public ResponseEntity<Message> getDetailMail(@RequestBody Map<String, String> body) throws IOException {
-//
-//        String userEmail = body.get("user_email");
-//        String messageId = body.get("messageId");
-//        Optional<GoogleTokenDto> byClient = googleTokenRepository.findByClient(clientId);
-//        if (byClient.isEmpty()) {
-//            log.info("byClient.isEmpty: {}", byClient);
-//            return null;
-//        }
-//
-//        return ResponseEntity.ok(gmailService.getMailById(byClient.get().getAccessToken(), messageId));
-//    }
-
     @ResponseBody
     @PostMapping("/api/mail/db")
     public List<List<Mail>> setMailDB(HttpServletRequest request) throws IOException {
@@ -312,25 +267,6 @@ public class GoogleController {
         return ResponseEntity.ok(messages);
     }
 
-//    @GetMapping("/gmail/list")
-//    public ResponseEntity<List> getMailBox(String email) throws  IOException {
-//
-//        googleTokenRepository.findBy
-//        List<ListForm> listForm = gmailService.fetchInboxBasicMessage(client.getAccessToken().getTokenValue());
-//        log.info("listForm: {}", listForm);
-//        return ResponseEntity.ok(listForm);
-//    }
-
-    @GetMapping("/api/test")
-    public ResponseEntity<?> apiTest(String email) throws IOException {
-        Email findEmail = emailRepository.findByEmail(email).orElse(null);
-        GoogleTokenDto findDTO = googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null);
-
-
-        List<ListForm> result = gmailService.fetchInboxBasicMessage(findDTO.getAccessToken());
-        return ResponseEntity.ok(result);
-
-    }
 
     // 테스트 결과 0.6초
     @GetMapping("/gmail/list/{messageId}")
@@ -355,36 +291,3 @@ public class GoogleController {
 
 }
 
-
-/**
- *
- *  @ResponseBody
- *     @PostMapping("/api/send_reply")
- *     public ResponseEntity<Message> sendReply(@RequestParam("clientId") String clientId, @RequestParam("to") String to,
- *                                             @RequestParam("subject") String subject, @RequestParam("bodyText") String bodyText,
- *                                             @RequestParam("inReplyTo") String inReplyTo, @RequestParam("references") String references , @RequestParam("attachment") MultipartFile attachment) throws Exception {
- *
- *
- *         String accessToken = googleTokenRepository.findByClient(clientId)
- *                 .map(GoogleTokenDto::getAccessToken)
- *                 .orElse(null);
- *         String myEmail = emailRepository.findBySocialId(clientId)
- *                 .map(Email::getEmail)
- *                 .orElse(null);
- *
- *         if (accessToken == null || myEmail == null) {
- *             throw new Exception("accessToken: " + accessToken + ", myEmail: " + myEmail);
- *         }
- *
- *         log.info("send mail body: {}, {}, {}, {}, {}", clientId, to, subject, bodyText, attachment);
- *
- *         log.info("send_mail: accessToken: {}", accessToken);
- *         log.info("send_mail: myEmail: {}", myEmail);
- *
- *
- *         Message message = gmailService.sendReplyEmail(accessToken, to, myEmail, subject, bodyText, inReplyTo, references);
- *         return ResponseEntity.ok(message);
- *     }
- *
- *
- */
