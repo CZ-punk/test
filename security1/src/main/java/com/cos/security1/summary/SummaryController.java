@@ -35,7 +35,7 @@ public class SummaryController {
         
 
         ServerReceiveDto receiveDto = summaryService.getSummaryFromAiServer(sendDto);
-        findMail.addSummaryContents(receiveDto.getSummary());
+//        findMail.addSummaryContents(receiveDto.getSummary());
 
         log.info("sendDto: {}", sendDto);
         log.info("receiveDto: {}", receiveDto);

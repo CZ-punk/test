@@ -23,7 +23,7 @@ public class Mail {
     private String subject;
     private String receiveTime;
     private String contents;
-    private String summaryContents;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "EMAIL_ID", referencedColumnName = "EMAIL_ID")
@@ -35,8 +35,6 @@ public class Mail {
     @JsonBackReference
     private GoogleTokenDto googleTokenDto;
 
-    public void addSummaryContents(String summary) {
-        summaryContents = summary;
-    }
+
 
 }
