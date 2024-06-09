@@ -3,7 +3,9 @@ package com.cos.security1.domain.mail;
 import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
+import com.cos.security1.summary.SummaryContent;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,6 +37,10 @@ public class Mail {
     @JsonBackReference
     private GoogleTokenDto googleTokenDto;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "SUMMARY_CONTENT_ID")
+//    @JsonManagedReference
+    private SummaryContent summaryContent;
 
 
 }

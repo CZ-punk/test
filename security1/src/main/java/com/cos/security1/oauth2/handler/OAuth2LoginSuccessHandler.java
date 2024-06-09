@@ -7,6 +7,7 @@ import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.jwt.JwtService;
 import com.cos.security1.oauth2.CustomOAuth2User;
+import com.cos.security1.summary.SummarySetting;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -95,6 +96,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 refreshToken = byEmail.getRefreshToken();
             }
         }
+        byEmail.changeSetting(new SummarySetting(true, 30, "구어체"));
 
         response.addHeader(jwtService.getAccessHeader(), "Bearer " + accessToken);
         response.addHeader(jwtService.getRefreshHeader(), "Bearer " + refreshToken);

@@ -1,6 +1,7 @@
 package com.cos.security1.domain.user.entity;
 
 import com.cos.security1.domain.email.Email;
+import com.cos.security1.summary.SummarySetting;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,14 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Email> emailList = new ArrayList<>();
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "SETTING_ID")
+    private SummarySetting setting;
+
+    public void changeSetting(SummarySetting setting) {
+        this.setting = setting;
+    }
 
     public void addEmail(Email email) {
         emailList.add(email);

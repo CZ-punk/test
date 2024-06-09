@@ -6,9 +6,7 @@ import com.cos.security1.domain.mail.Mail;
 import com.cos.security1.domain.mail.MailRepository;
 import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.repository.UserRepository;
-import com.cos.security1.google.form.ListForm;
-import com.cos.security1.google.form.SendForm;
-import com.cos.security1.google.form.SpamForm;
+import com.cos.security1.google.form.*;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.oauth2.CustomOAuth2User;
@@ -43,25 +41,126 @@ public class GoogleController {
 
     private static final String GOOGLE = "google";
 
-    /**
-     * 프론트 용 db 메일
-     * // 프론트에서 소셜로그인이든 google 계정을 등록하든 oauth2 인증을 거쳐 성공하면 /api/mail/db 를 단 1회만 호출
-     * // 그 후 db로 접근하는 url 인 /api/mails 를 nickname 을 json 으로 보낸 POST 요청 시
-     * // 해당 user 의 nickname 과 관련된 모든 메일을 보낸다.
-     */
 
-    /**
-     * 메일 송신할 때 프론트로부터 이메일 정보를 받든, 클라이언트 id 를 받든 하자.
-     * 클라이언트 ID 를 추천 ( 프론트와 상의 )
-     *
-     * 새 메일을 작성해서 보내는 send 하고
-     * 답장으로 보내는 send 구분
-     */
+    @GetMapping("/check/important")
+    public void check_ImportantMail(HttpServletRequest request, @RequestBody String messageId) throws IOException {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
+        }
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+
+        log.info("Important Check messageId: {}", messageId);
+
+        GoogleTokenDto googleToken = googleTokenRepository.findByClient(findUser.getSocialId()).get();
+
+        gmailService.checkImportantMail(googleToken.getAccessToken(), messageId);
+
+    }
+
+    // important mail fetchImportantEmailDetails
+    @ResponseBody
+    @GetMapping("/api/important_mail")
+    public List<ImportantMailForm> getImportantMail(HttpServletRequest request) throws IOException {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
+        }
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+
+        Long userId = findUser.getId();
+        List<Email> emailList = emailRepository.findListByUserId(userId);
+        log.info("/api/sent_mail emailList: {}", emailList);
+        if (emailList.isEmpty()) {
+            throw new IllegalStateException("AccessToken 의 userId 와 일치하는 Email 이 존재하지 않습니다.");
+        }
+
+        ArrayList<GoogleTokenDto> googleTokenList = new ArrayList<>();
+        List<ImportantMailForm> result = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
+        List<String> importantIds = new ArrayList<>();
+
+        for (Email findEmail : emailList) {
+            googleTokenList.add(googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null));
+        }
+
+        for (GoogleTokenDto googleTokenDto : googleTokenList) {
+            if (googleTokenDto == null) {
+                log.info("해당 google 계정에 문제가 발생하였습니다. {}", googleTokenDto);
+            }
+
+            messages.addAll(gmailService.getImportantMails(googleTokenDto.getAccessToken()));
+            for (Message message : messages) {
+                importantIds.add(message.getId());
+            }
+            result.addAll(gmailService.fetchImportantEmailDetails(importantIds, googleTokenDto.getAccessToken()));
+            importantIds.clear();
+            messages.clear();
+        }
+        return result;
+    }
+
+    // sent mail
+    @ResponseBody
+    @GetMapping("/api/sent_mail")
+    public List<SentMailForm> getSent(HttpServletRequest request) throws IOException {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            log.info("해당 request 의 Authorization 헤더에서 accessToken 을 찾을 수 없습니다: {}", token);
+        }
+        User findUser = userRepository.findByAccessToken(token).orElse(null);
+        if (findUser == null) {
+            throw new IllegalStateException("해당 accessToken 에 대한 관련 계정은 존재하지 않습니다.");
+        }
+
+        Long userId = findUser.getId();
+        List<Email> emailList = emailRepository.findListByUserId(userId);
+        log.info("/api/sent_mail emailList: {}", emailList);
+        if (emailList.isEmpty()) {
+            throw new IllegalStateException("AccessToken 의 userId 와 일치하는 Email 이 존재하지 않습니다.");
+        }
+
+        ArrayList<GoogleTokenDto> googleTokenList = new ArrayList<>();
+        List<SentMailForm> result = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
+        List<String> sentIds = new ArrayList<>();
+
+        for (Email findEmail : emailList) {
+            googleTokenList.add(googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null));
+        }
+
+        for (GoogleTokenDto googleTokenDto : googleTokenList) {
+            if (googleTokenDto == null) {
+                log.info("해당 google 계정에 문제가 발생하였습니다. {}", googleTokenDto);
+            }
+
+            messages.addAll(gmailService.getSentMails(googleTokenDto.getAccessToken()));
+            for (Message message : messages) {
+                sentIds.add(message.getId());
+            }
+            result.addAll(gmailService.fetchSentEmailDetails(sentIds, googleTokenDto.getAccessToken()));
+            sentIds.clear();
+            messages.clear();
+        }
+        return result;
+    }
 
     // spam mail
     @ResponseBody
-    @PostMapping("/api/spam_mail")
-    public List<List<SpamForm>> getSpam(HttpServletRequest request) throws IOException {
+    @GetMapping("/api/spam_mail")
+    public List<SpamForm> getSpam(HttpServletRequest request) throws IOException {
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
@@ -80,10 +179,10 @@ public class GoogleController {
             throw new IllegalStateException("AccessToken 의 userId 와 일치하는 Email 이 존재하지 않습니다.");
         }
 
-        List<Message> spamMails = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
         ArrayList<String> spamIds = new ArrayList<>();
         ArrayList<GoogleTokenDto> googleTokenList = new ArrayList<>();
-        ArrayList<String> googleToken = new ArrayList<>();
+        List<SpamForm> result = new ArrayList<>();
 
         for (Email findEmail : emailList) {
             googleTokenList.add(googleTokenRepository.findByClient(findEmail.getSocialId()).orElse(null));
@@ -92,17 +191,14 @@ public class GoogleController {
             if (googleTokenDto == null) {
                 log.info("해당 google 계정에 문제가 발생하였습니다. {}", googleTokenDto);
             }
-            spamMails = gmailService.getSpamMails(googleTokenDto.getAccessToken());
-            googleToken.add(googleTokenDto.getAccessToken());
+            messages.addAll(gmailService.getSpamMails(googleTokenDto.getAccessToken()));
 
-        }
-
-        List<List<SpamForm>> result = new ArrayList<>();
-        for (String gToken : googleToken) {
-            for (Message spamMail : spamMails) {
-                spamIds.add(spamMail.getId());
-                result.add(gmailService.fetchSpamEmailDetails(spamIds, gToken));
+            for (Message message : messages) {
+                spamIds.add(message.getId());
             }
+            result.addAll(gmailService.fetchSpamEmailDetails(spamIds, googleTokenDto.getAccessToken()));
+            spamIds.clear();
+            messages.clear();
         }
         return result;
     }

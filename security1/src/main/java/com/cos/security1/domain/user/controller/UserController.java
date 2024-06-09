@@ -11,6 +11,7 @@ import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.jwt.InMemoryAccountStore;
 import com.cos.security1.jwt.JwtService;
+import com.cos.security1.summary.SummarySetting;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 @Controller
 @Slf4j
@@ -54,6 +56,7 @@ public class UserController {
     @PostMapping("/sign-up")
     public ResponseEntity<UserSignDto> signUp(@RequestBody UserSignDto userSignDto) throws Exception {
         userService.signUp(userSignDto);
+
         return ResponseEntity.ok(userSignDto);
     }
 
@@ -104,6 +107,8 @@ public class UserController {
 
         log.info("/success url client: {}", client);
 
+
+
         if (client == null) {
             throw new IllegalStateException("클라이언트 정보를 찾을 수 없습니다.");
         }
@@ -111,10 +116,11 @@ public class UserController {
         GoogleTokenDto findDTO = googleTokenRepository.findByClient(authentication.getName()).orElse(null);
         Email findEmail = emailRepository.findBySocialId(findDTO.getClient()).orElse(null);
         User findUser = findEmail.getUser();
+
         if (findUser == null) {
             throw new Exception();
         }
-
+        findUser.changeSetting(new SummarySetting(true, 30, "구어체"));
         String redirectUrl = "/success" +
                 String.format("?access_token=%s&email=%s",
                         URLEncoder.encode(findUser.getAccessToken(), StandardCharsets.UTF_8),

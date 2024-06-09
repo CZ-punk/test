@@ -4,9 +4,9 @@ import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.mail.Mail;
 import com.cos.security1.domain.mail.MailRepository;
-import com.cos.security1.domain.user.entity.Role;
-import com.cos.security1.domain.user.entity.User;
+import com.cos.security1.google.form.ImportantMailForm;
 import com.cos.security1.google.form.ListForm;
+import com.cos.security1.google.form.SentMailForm;
 import com.cos.security1.google.form.SpamForm;
 import com.cos.security1.google.googleToken.GoogleTokenDto;
 import com.cos.security1.google.googleToken.GoogleTokenRepository;
@@ -19,6 +19,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import com.google.api.services.gmail.model.ModifyMessageRequest;
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
 import jakarta.mail.MessagingException;
@@ -27,14 +28,11 @@ import jakarta.mail.internet.*;
 import jakarta.mail.util.ByteArrayDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.swing.text.html.Option;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -54,11 +52,117 @@ public class GmailService {
 
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 
+
     public static Gmail getGmailService(String accessToken) throws IOException {
         Credential credential = new GoogleCredential().setAccessToken(accessToken);
         return new Gmail.Builder(new NetHttpTransport(), JSON_FACTORY, credential)
                 .setApplicationName("summail")
                 .build();
+    }
+
+    public void checkImportantMail(String accessToken, String messageId) throws IOException {
+        Gmail gmailService = getGmailService(accessToken);
+
+        // 메일 메시지 가져오기
+        Message message = gmailService.users().messages().get("me", messageId).execute();
+
+        log.info("why token message: {}", message);
+
+        // 메일 메시지 수정
+        ModifyMessageRequest modifyRequest = new ModifyMessageRequest();
+
+        log.info("why token modifyRequest: {}", modifyRequest);
+
+        modifyRequest.setAddLabelIds(Arrays.asList("IMPORTANT"));
+
+        Message updatedMessage = gmailService.users().messages().modify("me", messageId, modifyRequest).execute();
+
+        log.info("why token updatedMessage: {}", updatedMessage);
+
+
+
+    }
+
+    public List<Message> getImportantMails(String accessToken) throws IOException {
+        Gmail gmail = getGmailService(accessToken);
+        String query = "label:important OR label:starred";
+
+        ListMessagesResponse response = gmail.users().messages().list(userId)
+                .setQ(query)
+                .setFields("messages(id,threadId), nextPageToken")
+                .execute();
+
+        return response.getMessages();
+    }
+
+    public List<ImportantMailForm> fetchImportantEmailDetails(List<String> importantIds, String accessToken) throws IOException {
+        Gmail gmail = getGmailService(accessToken);
+        List<ImportantMailForm> emails = new ArrayList<>();
+
+        for (String id : importantIds) {
+            Message message = gmail.users().messages().get(userId, id).execute();
+
+            String subject = null;
+            String sender = null;
+            String receiver = null;
+            String snippet = message.getSnippet();
+
+            List<MessagePartHeader> headers = message.getPayload().getHeaders();
+            for (MessagePartHeader header : headers) {
+                if (header.getName().equals("Subject")) {
+                    subject = header.getValue();
+                } else if (header.getName().equals("From")) {
+                    sender = header.getValue();
+                } else if (header.getName().equals("To")) {
+                    receiver = header.getValue();
+                }
+            }
+
+            ImportantMailForm email = new ImportantMailForm(id, sender, receiver, subject, snippet);
+            emails.add(email);
+        }
+        return emails;
+    }
+
+    public List<Message> getSentMails(String accessToken) throws IOException {
+        Gmail gmail = getGmailService(accessToken);
+        String query = "label:sent";
+
+        ListMessagesResponse response = gmail.users().messages().list(userId)
+                .setQ(query)
+                .setFields("messages(id,threadId), nextPageToken")
+                .execute();
+
+        return response.getMessages();
+    }
+
+    public List<SentMailForm> fetchSentEmailDetails(List<String> sentIds, String accessToken) throws IOException {
+        Gmail gmail = getGmailService(accessToken);
+        List<SentMailForm> emails = new ArrayList<>();
+
+        for (String id : sentIds) {
+            Message message = gmail.users().messages().get(userId, id).execute();
+
+            String subject = null;
+            String sender = null;
+            String receiver = null;
+            String snippet = message.getSnippet();
+
+            List<MessagePartHeader> headers = message.getPayload().getHeaders();
+            for (MessagePartHeader header : headers) {
+                if (header.getName().equals("Subject")) {
+                    subject = header.getValue();
+                } else if (header.getName().equals("From")) {
+                    sender = header.getValue();
+                } else if (header.getName().equals("To")) {
+                    receiver = header.getValue();
+                }
+            }
+
+            SentMailForm email = new SentMailForm(id, sender, receiver, subject, snippet);
+            emails.add(email);
+        }
+        return emails;
     }
 
     public List<SpamForm> fetchSpamEmailDetails(List<String> spamIds, String accessToken) throws IOException {

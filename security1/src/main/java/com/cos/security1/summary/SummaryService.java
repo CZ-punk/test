@@ -1,5 +1,6 @@
 package com.cos.security1.summary;
 
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -14,15 +15,17 @@ public class SummaryService {
         return webClient.post()
                 .uri("http://43.200.188.238:8080/summary")
                 .bodyValue(serverSendDto)
+                .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToMono(ServerReceiveDto.class)
                 .block();
 
-        /**
-         * {"speech": str, // 어투
-         * "contents": str, // 내용
-         * "subject": str, // 제목
-         * "length": int} // 요약하고싶은 길이
-         */
+
     }
 }
+/**
+ * {"speech": str, // 어투
+ * "contents": str, // 내용
+ * "subject": str, // 제목
+ * "length": int} // 요약하고싶은 길이
+ */
