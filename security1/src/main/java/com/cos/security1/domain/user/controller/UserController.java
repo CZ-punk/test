@@ -157,12 +157,22 @@ public class UserController {
 //        responseBody.put("email", authentication.getPrincipal().getAttributes().get("email").toString());
 
 
-
+/*
     @PostMapping("/login")
     public ResponseEntity<User> login(LoginForm loginForm) throws Exception {
+        Optional<User> findUser = userRepository.findByEmailAndPassword(loginForm.getEmail(), loginForm.getPassword());
+        if (findUser.isEmpty()) {
+            throw new IllegalStateException("존재하지 않는 회원입니다.");
+        } else {
+            User user = findUser.get();
+            if (user.getSetting() == null) {
+                user.changeSetting(new SummarySetting(true, 30, "구어체"));
+            }
+        }
         User loginUser = userService.login(loginForm);
         return ResponseEntity.ok(loginUser);
     }
+*/
 
     @ResponseBody
     @GetMapping("/logout/success")

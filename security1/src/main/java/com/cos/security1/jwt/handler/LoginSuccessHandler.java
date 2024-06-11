@@ -1,7 +1,10 @@
 package com.cos.security1.jwt.handler;
 
+import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.jwt.JwtService;
 import com.cos.security1.domain.user.repository.UserRepository;
+import com.cos.security1.summary.SummarySetting;
+import jakarta.persistence.EntityManager;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +18,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -23,6 +27,7 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+
 
     @Value("${jwt.access.expiration}")
     private String accessTokenExpiration;
@@ -40,12 +45,16 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
         log.info("login Success Handler authentication: {}", authentication);
 //        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        userRepository.findByEmail(email)
+        Optional<User> findUser = userRepository.findByEmail(email);
+        findUser
                 .ifPresent(user -> {
                     user.setAccessToken(accessToken);
                     user.updateRefreshToken(refreshToken);
                     userRepository.saveAndFlush(user);
                 });
+
+
+
         log.info("로그인에 성공하였습니다. 이메일: {}", email);
         log.info("로그인에 성공하였습니다. AccessToken: {}", accessToken);
         log.info("로그인에 성공하였습니다. Expiration: {}", accessTokenExpiration);

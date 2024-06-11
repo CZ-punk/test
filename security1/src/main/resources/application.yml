@@ -19,6 +19,10 @@ spring:
     # cos cos1234
     #root ewqdsa1927
 
+#  jackson:
+#    serialization:
+#      fail-on-empty-beans: false
+
   jpa:
     hibernate:
       ddl-auto: update #create update none

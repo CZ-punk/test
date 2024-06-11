@@ -5,6 +5,8 @@ import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.dto.UserSignDto;
 import com.cos.security1.domain.user.entity.Role;
 import com.cos.security1.domain.user.repository.UserRepository;
+import com.cos.security1.summary.SummarySetting;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EntityManager em;
 
     public void signUp(UserSignDto userSignDto) throws Exception {
 
@@ -32,12 +35,18 @@ public class UserService {
             throw new Exception("이미 존재하는 닉네임입니다.");
         }
 
+        // SummarySetting 엔티티 생성
+        SummarySetting summarySetting = new SummarySetting(true, 30, "구어체");
+        em.persist(summarySetting);
         User user = User.builder()
                 .email(userSignDto.getEmail())
                 .password(userSignDto.getPassword())
                 .nickname(userSignDto.getNickname())
+                .setting(summarySetting)
                 .role(Role.USER)
                 .build();
+
+        user.changeSetting(summarySetting);
         log.info("user: {}", user);
 
         user.passwordEncode(passwordEncoder);

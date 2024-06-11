@@ -2,6 +2,7 @@ package com.cos.security1.domain.user.entity;
 
 import com.cos.security1.domain.email.Email;
 import com.cos.security1.summary.SummarySetting;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -46,10 +47,17 @@ public class User {
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "SETTING_ID")
+    @JsonIgnore
     private SummarySetting setting;
+
+    public void changeSet(int length, String speech) {
+        this.getSetting().setSpeech(speech);
+        this.getSetting().setSummaryLength(length);
+    }
 
     public void changeSetting(SummarySetting setting) {
         this.setting = setting;
+        setting.setUser(this);
     }
 
     public void addEmail(Email email) {

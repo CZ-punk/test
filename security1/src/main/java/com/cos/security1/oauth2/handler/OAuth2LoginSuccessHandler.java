@@ -8,6 +8,7 @@ import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.cos.security1.jwt.JwtService;
 import com.cos.security1.oauth2.CustomOAuth2User;
 import com.cos.security1.summary.SummarySetting;
+import jakarta.persistence.EntityManager;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -38,6 +39,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final EmailRepository emailRepository;
     private final GoogleTokenRepository googleTokenRepository;
     private final OAuth2AuthorizedClientService authorizedClientService;
+    private final EntityManager em;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -62,14 +64,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             addGoogleTokenDTO(oAuth2User);
 
             if (userRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
-
-
                 String redirectUrl = loginSuccess(response, oAuth2User);
                 log.info("redirect Success URL: {}", redirectUrl);
                 response.sendRedirect(redirectUrl);
             }
-
-
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -96,7 +94,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 refreshToken = byEmail.getRefreshToken();
             }
         }
-        byEmail.changeSetting(new SummarySetting(true, 30, "구어체"));
 
         response.addHeader(jwtService.getAccessHeader(), "Bearer " + accessToken);
         response.addHeader(jwtService.getRefreshHeader(), "Bearer " + refreshToken);
@@ -109,6 +106,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8);
         System.out.println("encodedName = " + encodedName);
 
+        if (byEmail.getSetting() == null) {
+            SummarySetting setting = new SummarySetting(true, 30, "구어체");
+            em.persist(setting);
+            byEmail.changeSetting(setting);
+        }
 
         return "summail://success?access_token=" + accessToken + "&email=" + oAuth2User.getEmail() + "&username=" + encodedName;
 

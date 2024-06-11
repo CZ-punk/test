@@ -11,6 +11,7 @@ import com.cos.security1.oauth2.handler.OAuth2LoginSuccessHandler;
 import com.cos.security1.oauth2.service.CustomOAuth2UserService;
 import com.cos.security1.domain.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -151,7 +152,6 @@ public class SecurityConfig {
         customJsonUsernamePasswordLoginFilter.setAuthenticationFailureHandler(loginFailureHandler());
         return customJsonUsernamePasswordLoginFilter;
     }
-
 
     @Bean
     public JwtAuthenticationProcessingFilter jwtAuthenticationProcessingFilter() {

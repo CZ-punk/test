@@ -247,8 +247,6 @@ public class GoogleController {
 
     }
 
-
-
     @ResponseBody
     @GetMapping("/api/mail_list")
     public List<Mail> getMailList(HttpServletRequest request) throws IOException {
@@ -348,8 +346,6 @@ public class GoogleController {
         }
         return result;
     }
-
-
 
 
     /**
