@@ -35,6 +35,13 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         String email = extractUsername(authentication);
+        User findUser = userRepository.findByEmail(email).orElse(null);
+
+        if (jwtService.isTokenValid(findUser.getAccessToken())) {
+
+            jwtService.sendAccessAndRefreshToken(response, findUser.getAccessToken(), findUser.getRefreshToken());
+            return;
+        }
         String accessToken = jwtService.createAccessToken(email);
         String refreshToken = jwtService.createRefreshToken(email);
 
@@ -45,8 +52,8 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
         log.info("login Success Handler authentication: {}", authentication);
 //        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        Optional<User> findUser = userRepository.findByEmail(email);
-        findUser
+        Optional<User> user2 = userRepository.findByEmail(email);
+        user2
                 .ifPresent(user -> {
                     user.setAccessToken(accessToken);
                     user.updateRefreshToken(refreshToken);

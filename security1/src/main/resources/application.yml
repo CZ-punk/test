@@ -79,11 +79,11 @@ jwt:
   secretKey: bXktc2VjdXJpdHktZnVja2luZy1wcm9qZWN0LWZpbGVzLXNlY3JldC1rZXktbGl0dGxlLWJpdAo
 
   access:
-    expiration: 360_000_000
+    expiration: 360_000_000_000
     header: Authorization
 
   refresh:
-    expiration: 1209_600_000 #  (1000L(ms -> s) * 60L(s -> m) * 60L(m -> h) * 24L(h -> 하루) * 14(2주))
+    expiration: 1209_600_000_000 #  (1000L(ms -> s) * 60L(s -> m) * 60L(m -> h) * 24L(h -> 하루) * 14(2주))
     header: Authorization-refresh
 
 
