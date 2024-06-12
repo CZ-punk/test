@@ -1,5 +1,6 @@
 package com.cos.security1.oauth2.handler;
 
+import com.cos.security1.domain.email.Email;
 import com.cos.security1.domain.email.repository.EmailRepository;
 import com.cos.security1.domain.user.entity.User;
 import com.cos.security1.domain.user.repository.UserRepository;
@@ -44,9 +45,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
 
-        try {
-
             log.info("OAuth2SuccessHandler: {}", authentication);
+
+            log.info("OAuth2 Success Handler request token = {}", request.getHeader("Authorization"));
             
             CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
@@ -63,15 +64,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             }
             addGoogleTokenDTO(oAuth2User);
 
-            if (userRepository.findByEmail(oAuth2User.getEmail()).isPresent()) {
+
                 String redirectUrl = loginSuccess(response, oAuth2User);
                 log.info("redirect Success URL: {}", redirectUrl);
-                response.sendRedirect(redirectUrl);
-            }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
+
+            response.sendRedirect(redirectUrl);
     }
 
     // TODO : 소셜 로그인 시에도 무조건 토큰 생성하지 말고 JWT 인증 필터처럼 RefreshToken 유/무에 따라 다르게 처리
@@ -82,7 +81,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String accessToken = null;
         String refreshToken = null;
 
-        User byEmail = userRepository.findByEmail(oAuth2User.getEmail()).orElse(null);
+        // 여기 부분 oAuth2 User 의 이메일이 아니라 response 헤더의 토큰으로 findBY 한 유저를 찾아서 토큰 넣어야한다.
+
+        // 어차피 토큰시간 많이 줬으니 됐고, emailRepository 에 소셜이든 추가든 하니 성공시 이메일 리포지토리들리자
+
+        Email findEmail = emailRepository.findByEmail(oAuth2User.getEmail()).orElse(null);
+        User byEmail = findEmail.getUser();
+
+
         if (byEmail != null) {
             boolean tokenValid = jwtService.isTokenValid(byEmail.getAccessToken());
             if (!tokenValid) {
@@ -94,13 +100,23 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 refreshToken = byEmail.getRefreshToken();
             }
         }
+        accessToken = byEmail.getAccessToken();
+        refreshToken = byEmail.getRefreshToken();
 
         response.addHeader(jwtService.getAccessHeader(), "Bearer " + accessToken);
         response.addHeader(jwtService.getRefreshHeader(), "Bearer " + refreshToken);
+        log.info("dd 0");
 
         jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
-        jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
-        jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
+        log.info("dd 1");
+
+//        jwtService.setAccessToken(oAuth2User.getEmail(), accessToken);
+
+        log.info("dd 2");
+//        jwtService.updateUserRefreshToken(oAuth2User.getEmail(), refreshToken);
+
+        log.info("dd 3");
+
 
         String name = (String) oAuth2User.getAttributes().get("name");
         String encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8);
