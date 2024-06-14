@@ -11,9 +11,7 @@ import com.cos.security1.google.googleToken.GoogleTokenRepository;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
@@ -101,7 +99,18 @@ public class SummaryController {
         ServerReceiveDto receiveDto = summaryService.getSummaryFromAiServer(sendDto);
         log.info("sendDto: {}", sendDto);
         log.info("receiveDto: {}", receiveDto);
+        Receive build = Receive.builder()
+                .contents(receiveDto.getSummary())
+                .messageId(summaryInfo.getMessageId())
+                .build();
 
-        return ResponseEntity.ok(receiveDto);
+        return ResponseEntity.ok(build);
+    }
+
+    @Data
+    @Builder
+    static class Receive {
+        private String contents;
+        private String messageId;
     }
 }
